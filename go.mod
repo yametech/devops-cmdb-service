@@ -1,3 +1,5 @@
-module github.com/laik/devops-cmdb-service
+module github.com/yametech/devops-cmdb-service
 
 go 1.16
+
+require github.com/gin-gonic/gin v1.6.3

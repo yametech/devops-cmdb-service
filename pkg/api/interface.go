@@ -1,36 +1,33 @@
 package api
 
+import "github.com/gin-gonic/gin"
+
 type IApiServer interface {
-	Run(<-chan struct{}) error
+	Run() error
 	Stop() error
+	GINEngine() *gin.Engine
 }
 
-var _ IApiServer = BaseServer{}
+var _ IApiServer = &BaseServer{}
 
 type BaseServer struct {
+	addrs []string
+	e     *gin.Engine
 }
 
-func (b BaseServer) Run(i <-chan struct{}) error {
-	for {
-		select {
-		case <-i:
-			return nil
-		}
-	}
+func (b *BaseServer) GINEngine() *gin.Engine {
+	return b.e
 }
 
-func (b BaseServer) Stop() error {
-	panic("implement me")
+func NewBaseServer(addr string) IApiServer {
+	baseServer := &BaseServer{e: gin.Default(), addrs: []string{addr}}
+	return baseServer
 }
 
-var _ IApiServer = fakeServer{}
-
-type fakeServer struct{}
-
-func (f fakeServer) Run(i <-chan struct{}) error {
-	panic("implement me")
+func (b *BaseServer) Run() error {
+	return b.e.Run(b.addrs...)
 }
 
-func (f fakeServer) Stop() error {
+func (b *BaseServer) Stop() error {
 	panic("implement me")
 }
