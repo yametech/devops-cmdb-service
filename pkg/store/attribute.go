@@ -45,6 +45,7 @@ type Attribute struct {
 }
 
 func (obj Attribute) Save() error {
+	//obj.Visible = true
 	return GetSession(false).Save(obj)
 }
 
