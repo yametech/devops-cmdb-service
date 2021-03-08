@@ -45,13 +45,13 @@ type Attribute struct {
 }
 
 func (obj Attribute) Save() error {
-	return GetSession().Save(obj)
+	return GetSession(false).Save(obj)
 }
 
 func (obj Attribute) List(field string, value interface{}) interface{} {
 	result := &[]Attribute{}
 	query := fmt.Sprintf("MATCH (a:Attribute {%s:$%s})", field, field)
 	properties := map[string]interface{}{field: value}
-	_ = GetSession().Query(query, properties, result)
+	_ = GetSession(true).Query(query, properties, result)
 	return result
 }

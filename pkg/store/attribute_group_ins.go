@@ -14,7 +14,7 @@ type AttributeGroupIns struct {
 }
 
 func (obj AttributeGroupIns) Save() error {
-	return GetSession().Save(obj)
+	return GetSession(false).Save(obj)
 }
 
 //func (mg ModelGroup) List(uuid string)  {

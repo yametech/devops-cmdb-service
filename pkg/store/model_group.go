@@ -13,7 +13,7 @@ type ModelGroup struct {
 }
 
 func (mg ModelGroup) Save() error {
-	return GetSession().Save(mg)
+	return GetSession(false).Save(mg)
 }
 
 //func (mg ModelGroup) List(uuid string)  {
