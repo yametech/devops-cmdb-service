@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"github.com/mindstand/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/core"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 )
@@ -29,19 +28,6 @@ func init() {
 	fmt.Println("Neo4jInit....end")
 }
 
-func getSession() *gogm.Session {
-	//param is readonly, we're going to make stuff so we're going to do read write
-	sess, err := gogm.NewSession(false)
-	//sess, err := gogm.NewSessionWithConfig(gogm.SessionConfig{DatabaseName:"cmdb"})
-	if err != nil {
-		panic(err)
-	}
-
-	//close the session
-	defer sess.Close()
-	return sess
-}
-
 func (s Service) ManualQuery(query string, properties map[string]interface{}, respObj interface{}) {
-	getSession().Query(query, properties, respObj)
+	store.GetSession().Query(query, properties, respObj)
 }

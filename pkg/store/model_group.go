@@ -2,7 +2,6 @@ package store
 
 import (
 	"github.com/mindstand/gogm"
-	"github.com/yametech/devops-cmdb-service/pkg/utils"
 )
 
 type ModelGroup struct {
@@ -14,7 +13,7 @@ type ModelGroup struct {
 }
 
 func (mg ModelGroup) Save() error {
-	return utils.GetSession().Save(mg)
+	return GetSession().Save(mg)
 }
 
 //func (mg ModelGroup) List(uuid string)  {

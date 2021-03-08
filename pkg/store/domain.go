@@ -30,17 +30,3 @@ type AttributeGroup struct {
 	Attributes []*Attribute `json:"-" gogm:"direction=incoming;relationship=GroupBy"`
 	CommonObj
 }
-
-type Attribute struct {
-	gogm.BaseNode
-	Uid            string          `json:"uid" gogm:"unique;name=uid"`
-	Name           string          `json:"name" gogm:"name=name"`
-	ValueType      string          `json:"valueType" gogm:"name=valueType"`
-	Editable       bool            `json:"editable" gogm:"name=editable"`
-	Required       bool            `json:"required" gogm:"name=required"`
-	Regular        string          `json:"regular" gogm:"name=regular"`
-	Comment        string          `json:"comment" gogm:"name=comment"`
-	ModelUid       string          `json:"modelUid" gogm:"name=modelUid"`
-	AttributeGroup *AttributeGroup `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
-	CommonObj
-}

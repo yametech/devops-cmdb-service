@@ -30,3 +30,17 @@ func Neo4jInit(host string, username string, password string) {
 		panic(err)
 	}
 }
+
+func GetSession() *gogm.Session {
+	//param is readonly, we're going to make stuff so we're going to do read write
+	sess, err := gogm.NewSession(false)
+	//sess, err := gogm.NewSessionWithConfig(gogm.SessionConfig{DatabaseName:"cmdb"})
+	if err != nil {
+		panic(err)
+	}
+
+	//close the session
+	defer sess.Close()
+
+	return sess
+}
