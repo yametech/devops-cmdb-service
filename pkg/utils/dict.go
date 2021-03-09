@@ -22,6 +22,7 @@ func ObjInterface(target map[string]interface{}) interface{} {
 	return m
 }
 
+// dst：目的  src：源
 func SimpleConvert(dst, src interface{}) {
 	byteRrc, _ := json.Marshal(src)
 	err := json.Unmarshal(byteRrc, dst)

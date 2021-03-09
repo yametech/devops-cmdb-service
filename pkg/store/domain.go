@@ -19,6 +19,7 @@ type Model struct {
 	IconUrl         string            `json:"iconUrl" gogm:"name=iconUrl"`
 	ModelGroup      *ModelGroup       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
 	AttributeGroups []*AttributeGroup `json:"-" gogm:"direction=incoming;relationship=GroupBy"`
+	Resources       []*Resource       `json:"-" gogm:"direction=incoming;relationship=Instance"`
 	CommonObj
 }
 

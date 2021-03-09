@@ -5,7 +5,7 @@ import (
 	"github.com/mindstand/gogm"
 )
 
-type Attribute struct {
+type AttributeCommon struct {
 	gogm.BaseNode
 	//  唯一标识
 	Uid string `json:"uid" gogm:"unique;name=uid"`
@@ -38,10 +38,14 @@ type Attribute struct {
 	// 字段是否可见
 	Visible bool `json:"visible" gogm:"name=visible"`
 	// 模型唯一标识
-	ModelUid       string          `json:"modelUid" gogm:"name=modelUid"`
-	AttributeGroup *AttributeGroup `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
+	ModelUid string `json:"modelUid" gogm:"name=modelUid"`
 	// 公共字段：创建人，更新人，创建时间，更新时间
 	CommonObj
+}
+
+type Attribute struct {
+	AttributeCommon
+	AttributeGroup *AttributeGroup `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
 }
 
 func (obj *Attribute) Save() error {

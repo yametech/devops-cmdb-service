@@ -27,12 +27,12 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.PUT("/model_group/:uid", server.putGroup)
 	groupRoute.DELETE("/model_group/:uid", server.deleteGroup)
 
-
-
 	// resource
-	resource := &ResourceApi{*server, &service.ResourceService{}}
-	groupRoute.POST("resource/model-attribute-list", resource.GetModelAttributeList)
-	groupRoute.POST("resource/model-list", resource.GetModelList)
+	resource := &ResourceApi{&service.ResourceService{}}
+	groupRoute.POST("/resource/model-attribute-list", resource.GetModelAttributeList)
+	groupRoute.POST("/resource/model-list", resource.GetModelList)
+	groupRoute.POST("/resource/resource-list/:modelUid", resource.GetResourceList)
+	groupRoute.POST("/resource/resource-detail/:uuid", resource.GetResourceDetail)
 
 	return server
 }

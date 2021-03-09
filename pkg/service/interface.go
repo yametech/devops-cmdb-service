@@ -28,8 +28,12 @@ func init() {
 	fmt.Println("Neo4jInit....end")
 }
 
-func (s *Service) ManualQuery(query string, properties map[string]interface{}, respObj interface{}) {
-	store.GetSession(true).Query(query, properties, respObj)
+func (s *Service) ManualQuery(query string, properties map[string]interface{}, respObj interface{}) error {
+	return store.GetSession(true).Query(query, properties, respObj)
+}
+
+func (s *Service) ManualQueryRaw(query string, properties map[string]interface{}) ([][]interface{}, error) {
+	return store.GetSession(true).QueryRaw(query, properties)
 }
 
 func (s *Service) ManualExecute(query string, properties map[string]interface{}) ([][]interface{}, error) {

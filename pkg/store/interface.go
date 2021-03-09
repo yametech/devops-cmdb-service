@@ -1,8 +1,11 @@
 package store
 
 import (
+	"fmt"
+	dsl "github.com/mindstand/go-cypherdsl"
 	"github.com/mindstand/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/core"
+	"reflect"
 )
 
 type IStore interface {
@@ -25,7 +28,10 @@ func Neo4jInit(host string, username string, password string) {
 		Password:      password,
 	}
 
-	err := gogm.Init(config, &ModelGroup{}, &Model{}, &AttributeGroup{}, &Attribute{})
+	err := gogm.Init(config,
+		&ModelGroup{}, &Model{}, &AttributeGroup{}, &Attribute{},
+		&Resource{}, &AttributeGroupIns{}, &AttributeIns{},
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -43,4 +49,49 @@ func GetSession(readonly bool) *gogm.Session {
 	defer sess.Close()
 
 	return sess
+}
+
+type INeo4j interface {
+	Get(string) (interface{}, error)
+	List(string) ([]interface{}, error)
+	Save(interface{}) error
+	Update(interface{}) error
+	Delete(interface{}) error
+}
+
+type Neo4jDomain struct {
+	// neo4j自身用
+	Id string
+	// gogm中间件写死的主键
+	Uuid string
+	// cmdb主键
+	Uid string
+}
+
+func (domain *Neo4jDomain) Get(respObj interface{}, key string, value interface{}) error {
+	rft := reflect.TypeOf(respObj)
+	params, _ := dsl.ParamsFromMap(map[string]interface{}{key: value})
+	cypher, _ := dsl.QB().
+		Match(dsl.Path().V(dsl.V{Name: "a", Type: rft.Elem().Name(), Params: params}).Build()).
+		Return(false, dsl.ReturnPart{Name: "a"}).
+		ToCypher()
+
+	fmt.Println(cypher)
+	return GetSession(true).Query(cypher, nil, respObj)
+}
+
+func (domain *Neo4jDomain) List(respObj interface{}) {
+	GetSession(true).LoadAll(respObj)
+}
+
+func (domain *Neo4jDomain) Save(respObj interface{}) {
+	GetSession(false).Save(respObj)
+}
+
+func (domain *Neo4jDomain) Update(respObj interface{}) {
+	GetSession(false).Save(respObj)
+}
+
+func (domain *Neo4jDomain) Delete(respObj interface{}) {
+	GetSession(false).Delete(respObj)
 }
