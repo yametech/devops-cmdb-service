@@ -13,7 +13,7 @@ type Resource struct {
 	CommonObj
 }
 
-func (obj Resource) Save() error {
+func (obj *Resource) Save() error {
 	return GetSession(false).Save(obj)
 }
 

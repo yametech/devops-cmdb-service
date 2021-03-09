@@ -44,12 +44,12 @@ type Attribute struct {
 	CommonObj
 }
 
-func (obj Attribute) Save() error {
+func (obj *Attribute) Save() error {
 	//obj.Visible = true
 	return GetSession(false).Save(obj)
 }
 
-func (obj Attribute) List(field string, value interface{}) interface{} {
+func (obj *Attribute) List(field string, value interface{}) interface{} {
 	result := &[]Attribute{}
 	query := fmt.Sprintf("MATCH (a:Attribute {%s:$%s})", field, field)
 	properties := map[string]interface{}{field: value}

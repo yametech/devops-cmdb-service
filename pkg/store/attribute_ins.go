@@ -13,7 +13,7 @@ type AttributeIns struct {
 	CommonObj
 }
 
-func (obj AttributeIns) Save() error {
+func (obj *AttributeIns) Save() error {
 	return GetSession(false).Save(obj)
 }
 
