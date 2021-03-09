@@ -15,6 +15,7 @@ type ResourceApi struct {
 	resourceService *service.ResourceService
 }
 
+// 获取资源实例字段列表
 func (r ResourceApi) GetModelAttributeList(ctx *gin.Context) {
 	b, _ := ioutil.ReadAll(ctx.Request.Body)
 	fmt.Println(string(b))
@@ -29,4 +30,18 @@ func (r ResourceApi) ConfigModelAttribute(ctx *gin.Context) {
 	json.Unmarshal([]byte(ctx.Query("columns")), result)
 	r.resourceService.SetModelAttribute(ctx.Query("modelUid"), result)
 	Success(ctx, nil)
+}
+
+// 获取模型列表
+func (r ResourceApi) GetModelList(ctx *gin.Context) {
+	result := &[]common.SimpleModelVO{}
+	utils.SimpleConvert(result, service.ModeService{}.List())
+	Success(ctx, result)
+}
+
+// 获取模型实例列表
+func (r ResourceApi) GetModelInsList(ctx *gin.Context) {
+	result := &[]common.SimpleModelVO{}
+	utils.SimpleConvert(result, service.ModeService{}.List())
+	Success(ctx, result)
 }

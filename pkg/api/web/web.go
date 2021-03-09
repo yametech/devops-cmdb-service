@@ -24,6 +24,7 @@ func NewServer(apiServer api.IApiServer) *Server {
 	// resource
 	resource := &ResourceApi{*server, &service.ResourceService{}}
 	groupRoute.POST("resource/model-attribute-list", resource.GetModelAttributeList)
+	groupRoute.POST("resource/model-list", resource.GetModelList)
 
 	return server
 }

@@ -11,3 +11,8 @@ type ModelAttributeVisibleVO struct {
 	Name    string `json:"name"`
 	Visible bool   `json:"visible"`
 }
+
+type SimpleModelVO struct {
+	Uid  string `json:"uid"`
+	Name string `json:"name"`
+}
