@@ -49,12 +49,6 @@ func (rs *ResourceService) GetResourceDetail(uuid string) (interface{}, error) {
 		return nil, err
 	}
 
-	type resourceDetail struct {
-		store.Resource
-		store.AttributeGroupIns
-		store.AttributeIns
-	}
-
 	query := "MATCH (a:Resource)<-[]-(b:AttributeGroupIns)<-[]-(c:AttributeIns) WHERE a.uuid=$uuid RETURN *"
 	result, err := rs.ManualQueryRaw(query, map[string]interface{}{"uuid": uuid})
 	if err != nil {
@@ -75,7 +69,6 @@ func (rs *ResourceService) GetResourceDetail(uuid string) (interface{}, error) {
 		attributeGroupIns.AddAttributeIns(attributeIns)
 		r.AddAttributeGroupIns(attributeGroupIns)
 	}
-	printOut(r)
 	return r, nil
 }
 
