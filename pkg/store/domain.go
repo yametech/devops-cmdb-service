@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"github.com/mindstand/gogm"
 )
 
@@ -29,4 +30,12 @@ type AttributeGroup struct {
 	Model      *Model       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
 	Attributes []*Attribute `json:"-" gogm:"direction=incoming;relationship=GroupBy"`
 	CommonObj
+}
+
+func (m *Model) Get(uid string) error {
+	query := fmt.Sprintf("match (a:Model) where a.uid = $uid return a")
+	properties := map[string]interface{}{
+		"uid": uid,
+	}
+	return GetSession(false).Query(query, properties, m)
 }

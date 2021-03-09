@@ -28,7 +28,11 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.PUT("/model_group/:uid", server.putGroup)
 	groupRoute.DELETE("/model_group/:uid", server.deleteGroup)
 
-
+	groupRoute.GET("/model", server.getAllModel)
+	groupRoute.GET("/model/:uid", server.getModel)
+	groupRoute.POST("/model", server.createGroup)
+	groupRoute.PUT("/model/:uid", server.putGroup)
+	groupRoute.DELETE("/model/:uid", server.deleteGroup)
 
 	return server
 }
