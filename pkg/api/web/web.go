@@ -13,13 +13,21 @@ type Server struct {
 }
 
 func NewServer(apiServer api.IApiServer) *Server {
+	apiServer.GINEngine()
 	server := &Server{
 		apiServer,
 	}
 	groupRoute := apiServer.GINEngine().Group(common.WEB_API_GROUP)
 	groupRoute.GET("/member", server.ListMemberApi)
 	groupRoute.POST("/model-group", server.ListModelGroup)
-	groupRoute.POST("/model-list", server.ListModel)
+
+	groupRoute.GET("/model_group", server.getAllGroup)
+	groupRoute.GET("/model_group/:uid", server.getGroup)
+	groupRoute.POST("/model_group", server.createGroup)
+	groupRoute.PUT("/model_group/:uid", server.putGroup)
+	groupRoute.DELETE("/model_group/:uid", server.deleteGroup)
+
+
 
 	// resource
 	resource := &ResourceApi{*server, &service.ResourceService{}}

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"github.com/mindstand/gogm"
 )
 
@@ -12,14 +13,29 @@ type ModelGroup struct {
 	CommonObj
 }
 
-func (mg ModelGroup) Save() error {
+func (mg *ModelGroup) Save() error {
 	return GetSession(false).Save(mg)
 }
 
-//func (mg ModelGroup) List(uuid string)  {
-//
-//	//m := &[]ModelGroup{}
-//	//err := getSession().LoadAll(m)
-//
-//
-//}
+func (mg *ModelGroup) Get(uid string) error {
+	query := fmt.Sprintf("match (a:ModelGroup) where a.uid = $uid return a")
+	properties := map[string]interface{}{
+		"uid": uid,
+	}
+	return GetSession(false).Query(query, properties, mg)
+}
+
+func (mg *ModelGroup) Delete(uid string) error {
+	query := fmt.Sprintf("match (a:ModelGroup) where a.uid = $uid return a")
+	properties := map[string]interface{}{
+		"uid": uid,
+	}
+	session := GetSession(false)
+	if err := session.Query(query, properties, mg); err != nil {
+		return err
+	}
+	if err := session.Delete(mg); err != nil {
+		return err
+	}
+	return nil
+}
