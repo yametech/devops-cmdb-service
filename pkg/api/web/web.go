@@ -14,7 +14,6 @@ type Server struct {
 
 func NewServer(apiServer api.IApiServer) *Server {
 	apiServer.GINEngine()
-
 	server := &Server{
 		apiServer,
 	}
@@ -34,7 +33,20 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.PUT("/model/:uid", server.putGroup)
 	groupRoute.DELETE("/model/:uid", server.deleteGroup)
 
+	// resource
+	resource := &ResourceApi{*server, &service.ResourceService{}}
+	groupRoute.POST("resource/model-attribute-list", resource.GetModelAttributeList)
+	groupRoute.POST("resource/model-list", resource.GetModelList)
+
 	return server
+}
+
+func Success(ctx *gin.Context, data interface{}) {
+	ctx.JSON(200, &common.ApiResponseVO{Data: data, Code: 200})
+}
+
+func Error(ctx *gin.Context, msg string) {
+	ctx.JSON(200, &common.ApiResponseVO{Msg: msg, Code: 400})
 }
 
 func (s *Server) ListMemberApi(ctx *gin.Context) {

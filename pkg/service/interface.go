@@ -31,3 +31,7 @@ func init() {
 func (s Service) ManualQuery(query string, properties map[string]interface{}, respObj interface{}) {
 	store.GetSession(true).Query(query, properties, respObj)
 }
+
+func (s Service) ManualExecute(query string, properties map[string]interface{}) ([][]interface{}, error) {
+	return store.GetSession(false).QueryRaw(query, properties)
+}

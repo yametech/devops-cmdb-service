@@ -17,6 +17,7 @@ type Model struct {
 	gogm.BaseNode
 	Uid             string            `json:"uid" gogm:"unique;name=uid"`
 	Name            string            `json:"name" gogm:"name=name"`
+	IconUrl         string            `json:"iconUrl" gogm:"name=iconUrl"`
 	ModelGroup      *ModelGroup       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
 	AttributeGroups []*AttributeGroup `json:"-" gogm:"direction=incoming;relationship=GroupBy"`
 	CommonObj
