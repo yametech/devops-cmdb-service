@@ -40,3 +40,22 @@ func (m *Model) Get(uid string) error {
 	}
 	return GetSession(false).Query(query, properties, m)
 }
+
+func (m *Model) Save() error {
+	return GetSession(false).Save(m)
+}
+
+func (m *Model) Delete(uid string) error {
+	query := fmt.Sprintf("match (a:Model) where a.uid = $uid return a")
+	properties := map[string]interface{}{
+		"uid": uid,
+	}
+	session := GetSession(false)
+	if err := session.Query(query, properties, m); err != nil {
+		return err
+	}
+	if err := session.Delete(m); err != nil {
+		return err
+	}
+	return nil
+}

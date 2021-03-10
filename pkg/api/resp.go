@@ -15,3 +15,7 @@ func RequestErr(g *gin.Context, err error) {
 	g.Abort()
 }
 
+func RequestOK(g *gin.Context, data interface{}) {
+	g.JSON(http.StatusOK, &message{Data: data, Msg: "request success"})
+	g.Abort()
+}

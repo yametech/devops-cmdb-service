@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
-	"net/http"
 )
 
 func (s *Server) getAllGroup(ctx *gin.Context) {
@@ -18,7 +17,7 @@ func (s *Server) getAllGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, allMG)
+	api.RequestOK(ctx, allMG)
 }
 
 func (s *Server) getGroup(ctx *gin.Context) {
@@ -29,7 +28,7 @@ func (s *Server) getGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, originMG)
+	api.RequestOK(ctx, originMG)
 }
 
 func (s *Server) createGroup(ctx *gin.Context) {
@@ -49,7 +48,7 @@ func (s *Server) createGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, modelGroup)
+	api.RequestOK(ctx, modelGroup)
 }
 
 func (s *Server) putGroup(ctx *gin.Context) {
@@ -76,7 +75,7 @@ func (s *Server) putGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, newMG)
+	api.RequestOK(ctx, newMG)
 }
 
 func (s *Server) deleteGroup(ctx *gin.Context) {
@@ -87,7 +86,7 @@ func (s *Server) deleteGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, "")
+	api.RequestOK(ctx, "")
 }
 
 func (s *Server) getAllModel(ctx *gin.Context) {
@@ -99,18 +98,17 @@ func (s *Server) getAllModel(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, allModel)
+	api.RequestOK(ctx, allModel)
 }
 
 func (s *Server) getModel(ctx *gin.Context) {
-	model := &store.Model{}
 	uid := ctx.Param("uid")
-	err := model.Get(uid)
+	err := s.model.Get(uid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, model)
+	api.RequestOK(ctx, s.model)
 }
 
 func (s *Server) createModel(ctx *gin.Context) {
@@ -119,17 +117,70 @@ func (s *Server) createModel(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	modelGroup := &store.ModelGroup{}
-	if err := json.Unmarshal(rawData, modelGroup); err != nil {
+	unstructured := make(map[string]interface{})
+	if err := json.Unmarshal(rawData, &unstructured); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-
-	err = modelGroup.Save()
+	modelGroupUid := fmt.Sprintf("%v", unstructured["modelgroupuid"])
+	if err := s.modelGroup.Get(modelGroupUid); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	model := &store.Model{}
+	if err := json.Unmarshal(rawData, model); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	model.ModelGroup = s.modelGroup
+	err = model.Save()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, modelGroup)
+	//s.modelGroup.Models = append(s.modelGroup.Models, model)
+	//err = s.modelGroup.Save()
+	//if err != nil {
+	//	api.RequestErr(ctx, err)
+	//	return
+	//}
+	api.RequestOK(ctx, model)
 }
 
+func (s *Server) putModel(ctx *gin.Context) {
+	rawData, err := ctx.GetRawData()
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	uid := ctx.Param("uid")
+	originModel := &store.Model{}
+	err = originModel.Get(uid)
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	newModel := &store.Model{}
+	if err := json.Unmarshal(rawData, newModel); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	newModel.UUID = originModel.UUID
+	err = newModel.Save()
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	api.RequestOK(ctx, newModel)
+}
+
+func (s *Server) deleteModel(ctx *gin.Context) {
+	uid := ctx.Param("uid")
+	model := &store.Model{}
+	err := model.Delete(uid)
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	api.RequestOK(ctx, "")
+}
