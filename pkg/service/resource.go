@@ -12,6 +12,7 @@ import (
 
 type ResourceService struct {
 	Service
+	store.Neo4jDomain
 }
 
 // 模型属性字段列表
@@ -42,9 +43,8 @@ func (rs *ResourceService) GetResourceList(modelUid string, currentPage int, pag
 
 // 获取资源详情
 func (rs *ResourceService) GetResourceDetail(uuid string) (interface{}, error) {
-	neo4j := store.Neo4jDomain{}
 	r := &store.Resource{}
-	err := neo4j.Get(r, "uuid", uuid)
+	err := rs.Neo4jDomain.Get(r, "uuid", uuid)
 	if err != nil {
 		return nil, err
 	}
@@ -70,6 +70,18 @@ func (rs *ResourceService) GetResourceDetail(uuid string) (interface{}, error) {
 		r.AddAttributeGroupIns(attributeGroupIns)
 	}
 	return r, nil
+}
+
+func (rs *ResourceService) ResourceAttributeUpdate(uuid string, attributeInsValue string) error {
+	a := &store.AttributeIns{}
+	err := rs.Neo4jDomain.Get(a, "uuid", uuid)
+	if err != nil {
+		return err
+	}
+
+	a.AttributeInsValue = attributeInsValue
+	rs.Save(a)
+	return nil
 }
 
 func printOut(obj interface{}) {

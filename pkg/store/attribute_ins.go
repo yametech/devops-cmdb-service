@@ -5,7 +5,7 @@ type AttributeIns struct {
 	//ModelUid          string             `json:"modelUid" gogm:"name=modelUid"`
 	AttributeGroupIns *AttributeGroupIns `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
 	// 值
-	Value string `json:"value" gogm:"name=value"`
+	AttributeInsValue string `json:"attributeInsValue" gogm:"name=attributeInsValue"`
 }
 
 func (obj *AttributeIns) Save() error {

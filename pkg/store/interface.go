@@ -80,18 +80,18 @@ func (domain *Neo4jDomain) Get(respObj interface{}, key string, value interface{
 	return GetSession(true).Query(cypher, nil, respObj)
 }
 
-func (domain *Neo4jDomain) List(respObj interface{}) {
-	GetSession(true).LoadAll(respObj)
+func (domain *Neo4jDomain) List(respObj interface{}) error {
+	return GetSession(true).LoadAll(respObj)
 }
 
-func (domain *Neo4jDomain) Save(respObj interface{}) {
-	GetSession(false).Save(respObj)
+func (domain *Neo4jDomain) Save(respObj interface{}) error {
+	return GetSession(false).Save(respObj)
 }
 
-func (domain *Neo4jDomain) Update(respObj interface{}) {
-	GetSession(false).Save(respObj)
+func (domain *Neo4jDomain) Update(respObj interface{}) error {
+	return GetSession(false).Save(respObj)
 }
 
-func (domain *Neo4jDomain) Delete(respObj interface{}) {
-	GetSession(false).Delete(respObj)
+func (domain *Neo4jDomain) Delete(respObj interface{}) error {
+	return GetSession(false).Delete(respObj)
 }
