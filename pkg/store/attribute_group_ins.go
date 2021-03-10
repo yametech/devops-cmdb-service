@@ -29,7 +29,7 @@ func (obj *AttributeGroupIns) AddAttributeIns(target *AttributeIns) {
 	}
 
 	for _, attributeIns := range obj.AttributeIns {
-		if attributeIns.UUID == target.UUID {
+		if attributeIns.Uid == target.Uid {
 			return
 		}
 	}

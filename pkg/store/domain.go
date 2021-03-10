@@ -20,11 +20,10 @@ type Model struct {
 	Name            string            `json:"name" gogm:"name=name"`
 	IconUrl         string            `json:"iconUrl" gogm:"name=iconUrl"`
 	ModelGroup      *ModelGroup       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
-	AttributeGroups []*AttributeGroup `json:"-" gogm:"direction=incoming;relationship=GroupBy"`
-	Resources       []*Resource       `json:"-" gogm:"direction=incoming;relationship=Instance"`
+	AttributeGroups []*AttributeGroup `json:"attributeGroups" gogm:"direction=incoming;relationship=GroupBy"`
+	Resources       []*Resource       `json:"resources" gogm:"direction=incoming;relationship=Instance"`
 	CommonObj
 }
-
 
 func (m *Model) Get(uid string) error {
 	query := fmt.Sprintf("match (a:Model) where a.uid = $uid return a")

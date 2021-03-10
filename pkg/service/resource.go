@@ -37,11 +37,43 @@ func (rs *ResourceService) SetModelAttribute(modelUid string, result *[]common.M
 }
 
 // 获取模型实例列表
-func (rs *ResourceService) GetResourceList(modelUid string, currentPage int, pageSize int) interface{} {
-	r := &[]store.Resource{}
-	rs.ManualQuery("MATCH (a:Resource {modelUid:$modelUid}) ORDER BY a.createTime DESC SKIP $skip LIMIT $limit",
-		map[string]interface{}{"modelUid": modelUid, "skip": currentPage * pageSize, "limit": pageSize}, r)
-	return r
+func (rs *ResourceService) GetResourcePageList(modelUid string, currentPage int, pageSize int) interface{} {
+	srcList := &[]store.Resource{}
+	totalRaw, err := rs.ManualQueryRaw("MATCH (a:Resource {modelUid:$modelUid}) RETURN COUNT(a)",
+		map[string]interface{}{"modelUid": modelUid})
+	printOut(totalRaw[0][0])
+	total := totalRaw[0][0].(int64)
+	if err != nil {
+		panic(err)
+	}
+	if total <= 0 {
+		return common.PageResultVO{}
+	}
+
+	rs.ManualQuery("MATCH (a:Resource {modelUid:$modelUid}) RETURN a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit",
+		map[string]interface{}{"modelUid": modelUid, "skip": (currentPage - 1) * pageSize, "limit": pageSize}, srcList)
+
+	printOut(srcList)
+
+	pageResultVO := &common.PageResultVO{TotalCount: total}
+	//list := make([]common.ResourcePageListVO, 0)
+	list := make([]interface{}, 0)
+	for _, srcResource := range *srcList {
+		resource := &store.Resource{}
+		store.GetSession(true).LoadDepth(resource, srcResource.UUID, 10)
+		vo := &common.ResourcePageListVO{}
+		utils.SimpleConvert(vo, resource)
+		attributes := make(map[string]string)
+		for _, srcAttributeGroupIns := range resource.AttributeGroupIns {
+			for _, srcAttributeIns := range srcAttributeGroupIns.AttributeIns {
+				attributes[srcAttributeIns.Uid] = srcAttributeIns.AttributeInsValue
+			}
+		}
+		vo.Attributes = attributes
+		list = append(list, vo)
+	}
+	pageResultVO.List = list
+	return pageResultVO
 }
 
 func (rs *ResourceService) DeleteResource(uuid string) error {
@@ -51,7 +83,9 @@ func (rs *ResourceService) DeleteResource(uuid string) error {
 		return err
 	}
 
-	return rs.Neo4jDomain.Delete(r)
+	query := "match (a:Resource)-[]-(b:AttributeGroupIns)-[]-(c:AttributeIns) where a.uuid = $uuid detach  delete a,b,c"
+	_, err = rs.ManualExecute(query, map[string]interface{}{"uuid": uuid})
+	return err
 }
 
 func (rs *ResourceService) AddResource(body string, operator string) (interface{}, error) {
@@ -60,38 +94,44 @@ func (rs *ResourceService) AddResource(body string, operator string) (interface{
 	if err != nil {
 		return nil, err
 	}
+	//printOut(bodyObj)
 
-	model := store.Model{Uid: bodyObj.ModelUid}
+	model := &store.Model{Uid: bodyObj.ModelUid}
 	err = rs.Neo4jDomain.Get(model, "uid", bodyObj.ModelUid)
 	if err != nil {
 		return nil, err
 	}
 
 	// 获取模型详细
-	fullModel := fakeGetFullModel()
+	//fullModel := fakeGetFullModel(rs)
+	fullModel := &store.Model{}
+	_ = store.GetSession(true).LoadDepth(fullModel, model.UUID, 2)
 
 	commonObj := initCommonObj(operator)
 	resource := &store.Resource{ModelUid: bodyObj.ModelUid, ModelName: bodyObj.ModelName, CommonObj: *commonObj}
-	resource.Models = &model
+	resource.Models = fullModel
 
 	for _, groupObj := range bodyObj.AttributeGroupIns {
 		attributeGroup := fullModel.GetAttributeGroupByUid(groupObj.Uid)
 		if attributeGroup != nil {
 			attributeGroupIns := &store.AttributeGroupIns{Uid: attributeGroup.Uid, Name: attributeGroup.Name}
-			resource.AddAttributeGroupIns(attributeGroupIns)
 			for _, attributeObj := range groupObj.AttributeIns {
 				attribute := attributeGroup.GetAttributeByUid(attributeObj.Uid)
-				attributeIns := &store.AttributeIns{
-					AttributeCommon:   attribute.AttributeCommon,
-					AttributeInsValue: attributeObj.AttributeInsValue,
-					CommonObj:         *commonObj,
+				if attribute != nil {
+					attribute.AttributeCommon.Visible = true
+					attributeIns := &store.AttributeIns{
+						AttributeCommon:   attribute.AttributeCommon,
+						AttributeInsValue: attributeObj.AttributeInsValue,
+						CommonObj:         *commonObj,
+					}
+					attributeGroupIns.AddAttributeIns(attributeIns)
+					resource.AddAttributeGroupIns(attributeGroupIns)
 				}
-				attributeGroupIns.AddAttributeIns(attributeIns)
 			}
 		}
 	}
 
-	err = resource.Save()
+	err = store.GetSession(false).SaveDepth(resource, 10)
 	return resource, err
 }
 
@@ -149,8 +189,13 @@ func initCommonObj(creator string) *store.CommonObj {
 	return &store.CommonObj{Creator: creator, Editor: creator, CreateTime: time.Now().Unix(), UpdateTime: time.Now().Unix()}
 }
 
-func fakeGetFullModel() *store.Model {
-	return &store.Model{}
+func fakeGetFullModel(rs *ResourceService) *store.Model {
+	jsonStr := "{\"id\":144,\"uuid\":\"fdec6cdf-72e8-4966-a23b-5d4990574094\",\"uid\":\"host\",\"name\":\"主机\",\"iconUrl\":\"\",\"attributeGroups\":[{\"id\":143,\"uuid\":\"83e3088e-dd38-4469-a5c8-e703a3863e32\",\"uid\":\"baseInfo\",\"name\":\"基本属性\",\"modelUid\":\"host\",\"attributes\":[{\"id\":142,\"uuid\":\"e066f7f1-d932-4994-8ab8-03332d61279c\",\"uid\":\"ip\",\"name\":\"网址\",\"valueType\":\"短字符串\",\"editable\":true,\"required\":false,\"defaultValue\":\"\",\"unit\":\"\",\"maximum\":\"\",\"minimum\":\"\",\"enums\":\"\",\"listValues\":\"\",\"tips\":\"\",\"regular\":\"(([01]{0,1}\\\\d{0,1}\\\\d|2[0-4]\\\\d|25[0-5])\\\\.){3}([01]{0,1}\\\\d{0,1}\\\\d|2[0-4]\\\\d|25[0-5])\",\"comment\":\"网址信息\",\"visible\":false,\"modelUid\":\"host\",\"creator\":\"\",\"editor\":\"\",\"createTime\":0,\"updateTime\":0}],\"creator\":\"\",\"editor\":\"\",\"createTime\":0,\"updateTime\":0},{\"id\":133,\"uuid\":\"bdb28935-6409-4344-88c5-b5b7a7bd117a\",\"uid\":\"otherInfo\",\"name\":\"其他属性\",\"modelUid\":\"host\",\"attributes\":[{\"id\":145,\"uuid\":\"67db51cc-180a-4c62-9926-b126a3961f00\",\"uid\":\"test\",\"name\":\"cesi\",\"valueType\":\"短字符串\",\"editable\":true,\"required\":false,\"defaultValue\":\"\",\"unit\":\"\",\"maximum\":\"\",\"minimum\":\"\",\"enums\":\"\",\"listValues\":\"\",\"tips\":\"\",\"regular\":\"(([01]{0,1}\\\\d{0,1}\\\\d|2[0-4]\\\\d|25[0-5])\\\\.){3}([01]{0,1}\\\\d{0,1}\\\\d|2[0-4]\\\\d|25[0-5])\",\"comment\":\"网址信息\",\"visible\":false,\"modelUid\":\"host\",\"creator\":\"\",\"editor\":\"\",\"createTime\":0,\"updateTime\":0}],\"creator\":\"\",\"editor\":\"\",\"createTime\":0,\"updateTime\":0}],\"resources\":null,\"creator\":\"\",\"editor\":\"\",\"createTime\":0,\"updateTime\":0}"
+	a := &store.Model{}
+
+	json.Unmarshal([]byte(jsonStr), a)
+	//printOut(a)
+	return a
 }
 
 func printOut(obj interface{}) {

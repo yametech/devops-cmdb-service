@@ -1,7 +1,6 @@
 package web
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
@@ -23,7 +22,6 @@ func NewServer(apiServer api.IApiServer) *Server {
 	}
 	groupRoute := apiServer.GINEngine().Group(common.WEB_API_GROUP)
 	groupRoute.GET("/member", server.ListMemberApi)
-	//groupRoute.POST("/model-group", server.ListModelGroup)
 
 	groupRoute.GET("/model-group", server.getAllGroup)
 	groupRoute.GET("/model-group/:uid", server.getGroup)
@@ -51,10 +49,14 @@ func NewServer(apiServer api.IApiServer) *Server {
 
 	// resource
 	resource := &ResourceApi{&service.ResourceService{}}
-	groupRoute.POST("/resource/model-attribute-list", resource.GetModelAttributeList)
-	groupRoute.POST("/resource/model-list", resource.GetModelList)
-	groupRoute.POST("/resource/resource-list/:modelUid", resource.GetResourceList)
-	groupRoute.POST("/resource/resource-detail/:uuid", resource.GetResourceDetail)
+	groupRoute.GET("/resource/model-attribute-list/:modelUid", resource.GetModelAttributeList)
+	groupRoute.GET("/resource/model-list", resource.GetModelList)
+	//groupRoute.GET("/resource/resource-list/:modelUid", resource.GetResourceList)
+	groupRoute.GET("/resource/resource-page-list", resource.GetResourcePageList)
+	groupRoute.GET("/resource/resource-detail/:uuid", resource.GetResourceDetail)
+	groupRoute.POST("/resource/add-resource", resource.AddResource)
+	groupRoute.DELETE("/resource/delete-resource/:uuid", resource.DeleteResource)
+	groupRoute.PUT("/resource/resource-attribute-update", resource.UpdateResourceAttribute)
 
 	return server
 }
@@ -69,17 +71,4 @@ func Error(ctx *gin.Context, msg string) {
 
 func (s *Server) ListMemberApi(ctx *gin.Context) {
 	ctx.JSON(200, map[string]interface{}{"abc": "123"})
-}
-
-func (s *Server) ListModelGroup(ctx *gin.Context) {
-
-	fmt.Printf("uid=%v\n", ctx.Param("uid"))
-	fmt.Printf("uid=%v\n", ctx.Query("uid"))
-	mgs := &service.ModeGroupService{}
-	ctx.JSON(200, mgs.ListByUid(ctx.Query("uid")))
-}
-
-func (s *Server) ListModel(ctx *gin.Context) {
-	ms := &service.ModeService{}
-	ctx.JSON(200, ms.List())
 }
