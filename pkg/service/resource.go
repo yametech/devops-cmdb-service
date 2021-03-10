@@ -72,7 +72,7 @@ func (rs *ResourceService) GetResourceDetail(uuid string) (interface{}, error) {
 	return r, nil
 }
 
-func (rs *ResourceService) ResourceAttributeUpdate(uuid string, attributeInsValue string) error {
+func (rs *ResourceService) ResourceAttributeUpdate(uuid string, attributeInsValue string, editor string) error {
 	a := &store.AttributeIns{}
 	err := rs.Neo4jDomain.Get(a, "uuid", uuid)
 	if err != nil {
@@ -80,8 +80,9 @@ func (rs *ResourceService) ResourceAttributeUpdate(uuid string, attributeInsValu
 	}
 
 	a.AttributeInsValue = attributeInsValue
-	rs.Save(a)
-	return nil
+	a.UpdateTime = time.Now().Unix()
+	a.Editor = editor
+	return rs.Save(a)
 }
 
 func printOut(obj interface{}) {

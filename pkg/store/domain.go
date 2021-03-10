@@ -9,8 +9,8 @@ type CommonObj struct {
 	//Id int64 `json:"id"`
 	Creator    string `json:"creator" gogm:"name=creator"`
 	Editor     string `json:"editor" gogm:"name=editor"`
-	CreateTime string `json:"createTime" gogm:"name=createTime"`
-	UpdateTime string `json:"updateTime" gogm:"name=updateTime"`
+	CreateTime int64  `json:"createTime" gogm:"name=createTime"`
+	UpdateTime int64  `json:"updateTime" gogm:"name=updateTime"`
 }
 
 type Model struct {
