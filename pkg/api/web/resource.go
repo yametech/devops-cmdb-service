@@ -35,7 +35,7 @@ func (r *ResourceApi) ConfigModelAttribute(ctx *gin.Context) {
 // 获取模型列表
 func (r *ResourceApi) GetModelList(ctx *gin.Context) {
 	result := &[]common.SimpleModelVO{}
-	utils.SimpleConvert(result, (&service.ModeService{}).List())
+	utils.SimpleConvert(result, r.resourceService.GetModeList())
 	Success(ctx, result)
 }
 

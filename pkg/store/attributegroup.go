@@ -8,7 +8,7 @@ import (
 
 type AttributeGroup struct {
 	gogm.BaseNode
-	Uid        string       `json:"uid" gogm:"unique;name=uid"`
+	Uid        string       `json:"uid" gogm:"name=uid"`
 	Name       string       `json:"name" gogm:"name=name"`
 	ModelUid   string       `json:"modelUid" gogm:"index;name=modelUid"`
 	Model      *Model       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`

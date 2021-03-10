@@ -38,12 +38,9 @@ func printOut(obj interface{}) {
 }
 
 func TestMyTest(t *testing.T) {
-	session := store.GetSession(true)
 	//model := &[]store.Resource{}
-	//_ = session.LoadAllDepth(model, 10)
-
-	model := &store.Resource{}
-	session.Load(model, "f83afe87-da2b-4660-a47e-7ce16ad22aa3")
+	model := make([]store.Resource, 0)
+	(&store.Neo4jDomain{}).Get(&model, "modelUid", "host")
 	printOut(model)
 }
 

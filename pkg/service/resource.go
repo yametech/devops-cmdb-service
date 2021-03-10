@@ -36,6 +36,12 @@ func (rs *ResourceService) SetModelAttribute(modelUid string, result *[]common.M
 	return nil
 }
 
+func (rs *ResourceService) GetModeList() interface{} {
+	modelList := &[]store.Model{}
+	rs.Neo4jDomain.List(modelList)
+	return modelList
+}
+
 // 获取模型实例列表
 func (rs *ResourceService) GetResourcePageList(modelUid string, currentPage int, pageSize int) interface{} {
 	srcList := &[]store.Resource{}
@@ -107,7 +113,9 @@ func (rs *ResourceService) AddResource(body string, operator string) (interface{
 	fullModel := &store.Model{}
 	_ = store.GetSession(true).LoadDepth(fullModel, model.UUID, 2)
 
-	commonObj := initCommonObj(operator)
+	commonObj := &store.CommonObj{}
+	commonObj.InitCommonObj(operator)
+
 	resource := &store.Resource{ModelUid: bodyObj.ModelUid, ModelName: bodyObj.ModelName, CommonObj: *commonObj}
 	resource.Models = fullModel
 
@@ -183,10 +191,6 @@ func (rs *ResourceService) UpdateResourceAttribute(uuid string, attributeInsValu
 	a.UpdateTime = time.Now().Unix()
 	a.Editor = editor
 	return rs.Save(a)
-}
-
-func initCommonObj(creator string) *store.CommonObj {
-	return &store.CommonObj{Creator: creator, Editor: creator, CreateTime: time.Now().Unix(), UpdateTime: time.Now().Unix()}
 }
 
 func fakeGetFullModel(rs *ResourceService) *store.Model {
