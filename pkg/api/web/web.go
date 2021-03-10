@@ -6,21 +6,20 @@ import (
 	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/service"
-	"github.com/yametech/devops-cmdb-service/pkg/store"
 )
 
 type Server struct {
 	api.IApiServer
-	model      *store.Model
-	modelGroup *store.ModelGroup
+	*service.ModelService
+	*service.AttributeService
 }
 
 func NewServer(apiServer api.IApiServer) *Server {
 	apiServer.GINEngine()
 	server := &Server{
 		apiServer,
-		&store.Model{},
-		&store.ModelGroup{},
+		&service.ModelService{},
+		&service.AttributeService{},
 	}
 	groupRoute := apiServer.GINEngine().Group(common.WEB_API_GROUP)
 	groupRoute.GET("/member", server.ListMemberApi)
@@ -37,6 +36,18 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.POST("/model", server.createModel)
 	groupRoute.PUT("/model/:uid", server.putModel)
 	groupRoute.DELETE("/model/:uid", server.deleteModel)
+
+	groupRoute.GET("/attribute-group", server.getAllAttributeGroup)
+	groupRoute.GET("/attribute-group/:uid", server.getAttributeGroup)
+	groupRoute.POST("/attribute-group", server.createAttributeGroup)
+	groupRoute.PUT("/attribute-group/:uid", server.putAttributeGroup)
+	groupRoute.DELETE("/attribute-group/:uid", server.deleteAttributeGroup)
+
+	groupRoute.GET("/attribute", server.getAllAttribute)
+	groupRoute.GET("/attribute/:uid", server.getAttribute)
+	groupRoute.POST("/attribute", server.createAttribute)
+	groupRoute.PUT("/attribute/:uid", server.putAttribute)
+	groupRoute.DELETE("/attribute/:uid", server.deleteAttribute)
 
 	// resource
 	resource := &ResourceApi{&service.ResourceService{}}

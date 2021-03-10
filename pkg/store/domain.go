@@ -25,15 +25,6 @@ type Model struct {
 	CommonObj
 }
 
-type AttributeGroup struct {
-	gogm.BaseNode
-	Uid        string       `json:"uid" gogm:"unique;name=uid"`
-	Name       string       `json:"name" gogm:"name=name"`
-	ModelUid   string       `json:"modelUid" gogm:"index;name=modelUid"`
-	Model      *Model       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
-	Attributes []*Attribute `json:"-" gogm:"direction=incoming;relationship=GroupBy"`
-	CommonObj
-}
 
 func (m *Model) Get(uid string) error {
 	query := fmt.Sprintf("match (a:Model) where a.uid = $uid return a")
@@ -42,7 +33,6 @@ func (m *Model) Get(uid string) error {
 	}
 	return GetSession(false).Query(query, properties, m)
 }
-
 
 func (m *Model) LoadAll(mList *[]*Model, groupId string) error {
 	query := fmt.Sprintf("match (a:Model)-[r:GroupBy]->(b:ModelGroup)where b.uid=$uid return a")
@@ -65,6 +55,21 @@ func (m *Model) Save() error {
 func (m *Model) Update() error {
 	m.UpdateTime = time.Now().Unix()
 	return GetSession(false).Save(m)
+}
+
+func (m *Model) Delete(uid string) error {
+	query := fmt.Sprintf("match (a:Model) where a.uid = $uid return a")
+	properties := map[string]interface{}{
+		"uid": uid,
+	}
+	session := GetSession(false)
+	if err := session.Query(query, properties, m); err != nil {
+		return err
+	}
+	if err := session.Delete(m); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (m *Model) GetAttributeGroupByUid(uid string) *AttributeGroup {

@@ -48,6 +48,30 @@ type Attribute struct {
 	CommonObj
 }
 
+func (a *Attribute) LoadAll(aList *[]*Attribute, groupId string) error {
+	query := fmt.Sprintf("match (a:Attribute)-[r:GroupBy]->(b:AttributeGroup)where b.uid=$uid return a")
+	properties := map[string]interface{}{
+		"uid": groupId,
+	}
+	err := GetSession(true).Query(query, properties, aList)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Attribute) Get(uid string) error {
+	query := fmt.Sprintf("match (a:Attribute) where a.uid = $uid return a")
+	properties := map[string]interface{}{
+		"uid": uid,
+	}
+	return GetSession(false).Query(query, properties, m)
+}
+
+func (m *Attribute) Delete() error {
+	return GetSession(false).Delete(m)
+}
+
 func (obj *Attribute) Save() error {
 	//obj.Visible = true
 	return GetSession(false).Save(obj)

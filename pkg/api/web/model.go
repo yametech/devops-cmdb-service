@@ -9,26 +9,32 @@ import (
 )
 
 func (s *Server) getAllGroup(ctx *gin.Context) {
-	allMG := &[]store.ModelGroup{}
+	allMG := make([]store.ModelGroup, 0)
 	query := fmt.Sprintf("match (a:ModelGroup) return a")
-	properties := map[string]interface{}{}
-	err := store.GetSession(true).Query(query, properties, allMG)
+	err := store.GetSession(true).Query(query, map[string]interface{}{}, &allMG)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
+	}
+	for i, v := range allMG {
+		models := make([]*store.Model, 0)
+		if err := s.Model.LoadAll(&models, v.Uid); err != nil {
+			api.RequestErr(ctx, err)
+			return
+		}
+		allMG[i].Models = models
 	}
 	api.RequestOK(ctx, allMG)
 }
 
 func (s *Server) getGroup(ctx *gin.Context) {
-	originMG := &store.ModelGroup{}
 	uid := ctx.Param("uid")
-	err := originMG.Get(uid)
+	err := s.ModelGroup.Get(uid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, originMG)
+	api.RequestOK(ctx, s.ModelGroup)
 }
 
 func (s *Server) createGroup(ctx *gin.Context) {
@@ -37,18 +43,16 @@ func (s *Server) createGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	modelGroup := &store.ModelGroup{}
-	if err := json.Unmarshal(rawData, modelGroup); err != nil {
+	if err := json.Unmarshal(rawData, &s.ModelGroup); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-
-	err = modelGroup.Save()
+	err = s.ModelGroup.Save()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, modelGroup)
+	api.RequestOK(ctx, s.ModelGroup)
 }
 
 func (s *Server) putGroup(ctx *gin.Context) {
@@ -64,24 +68,22 @@ func (s *Server) putGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	newMG := &store.ModelGroup{}
-	if err := json.Unmarshal(rawData, newMG); err != nil {
+	if err := json.Unmarshal(rawData, &s.ModelGroup); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	newMG.UUID = originMG.UUID
-	err = newMG.Save()
+	s.ModelGroup.UUID = originMG.UUID
+	err = s.ModelGroup.Update()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, newMG)
+	api.RequestOK(ctx, s.ModelGroup)
 }
 
 func (s *Server) deleteGroup(ctx *gin.Context) {
 	uid := ctx.Param("uid")
-	originMG := &store.ModelGroup{}
-	err := originMG.Delete(uid)
+	err := s.ModelGroup.Delete(uid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -103,12 +105,12 @@ func (s *Server) getAllModel(ctx *gin.Context) {
 
 func (s *Server) getModel(ctx *gin.Context) {
 	uid := ctx.Param("uid")
-	err := s.model.Get(uid)
+	err := s.Model.Get(uid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.model)
+	api.RequestOK(ctx, s.Model)
 }
 
 func (s *Server) createModel(ctx *gin.Context) {
@@ -123,28 +125,23 @@ func (s *Server) createModel(ctx *gin.Context) {
 		return
 	}
 	modelGroupUid := fmt.Sprintf("%v", unstructured["modelgroupuid"])
-	if err := s.modelGroup.Get(modelGroupUid); err != nil {
+
+	if err := s.ModelGroup.Get(modelGroupUid); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	model := &store.Model{}
-	if err := json.Unmarshal(rawData, model); err != nil {
+	if err := json.Unmarshal(rawData, &s.Model); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	model.ModelGroup = s.modelGroup
-	err = model.Save()
+	s.Model.ModelGroup = &s.ModelGroup
+	err = s.Model.Save()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	//s.modelGroup.Models = append(s.modelGroup.Models, model)
-	//err = s.modelGroup.Save()
-	//if err != nil {
-	//	api.RequestErr(ctx, err)
-	//	return
-	//}
-	api.RequestOK(ctx, model)
+
+	api.RequestOK(ctx, s.Model)
 }
 
 func (s *Server) putModel(ctx *gin.Context) {
@@ -157,27 +154,25 @@ func (s *Server) putModel(ctx *gin.Context) {
 	originModel := &store.Model{}
 	err = originModel.Get(uid)
 	if err != nil {
+		api.RequestErr(ctx, fmt.Errorf("get origin model error"))
+		return
+	}
+	if err := json.Unmarshal(rawData, &s.Model); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	newModel := &store.Model{}
-	if err := json.Unmarshal(rawData, newModel); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	newModel.UUID = originModel.UUID
-	err = newModel.Save()
+	s.Model.UUID = originModel.UUID
+	err = s.Model.Save()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, newModel)
+	api.RequestOK(ctx, s.Model)
 }
 
 func (s *Server) deleteModel(ctx *gin.Context) {
 	uid := ctx.Param("uid")
-	model := &store.Model{}
-	err := model.Delete(uid)
+	err := s.Model.Delete(uid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
