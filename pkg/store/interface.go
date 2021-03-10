@@ -60,9 +60,9 @@ type INeo4j interface {
 }
 
 type Neo4jDomain struct {
-	// neo4j自身用
+	// neo4j node id
 	Id string
-	// gogm中间件写死的主键
+	// gogm中间件主键
 	Uuid string
 	// cmdb主键
 	Uid string

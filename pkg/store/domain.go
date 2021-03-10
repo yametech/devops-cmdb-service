@@ -41,3 +41,23 @@ func (m *Model) Get(uid string) error {
 	}
 	return GetSession(false).Query(query, properties, m)
 }
+
+func (m *Model) GetAttributeGroupByUid(uid string) *AttributeGroup {
+	for _, group := range m.AttributeGroups {
+		if group.Uid == uid {
+			return group
+		}
+	}
+
+	return nil
+}
+
+func (m *AttributeGroup) GetAttributeByUid(uid string) *Attribute {
+	for _, attributes := range m.Attributes {
+		if attributes.Uid == uid {
+			return attributes
+		}
+	}
+
+	return nil
+}
