@@ -9,20 +9,13 @@ import (
 )
 
 func (s *Server) getAllAttributeGroup(ctx *gin.Context) {
-	allAG := make([]store.AttributeGroup, 0)
-	query := fmt.Sprintf("match (a:AttributeGroup) return a")
-	err := store.GetSession(true).Query(query, map[string]interface{}{}, &allAG)
+	limit := ctx.DefaultQuery("page_size", "10")
+	pageNumber := ctx.DefaultQuery("page_number", "1")
+
+	allAG, err := s.AttributeService.GetAttributeGroupList(limit, pageNumber)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
-	}
-	for i, v := range allAG {
-		attributes := make([]*store.Attribute, 0)
-		if err := s.Attribute.LoadAll(&attributes, v.Uid); err != nil {
-			api.RequestErr(ctx, err)
-			return
-		}
-		allAG[i].Attributes = attributes
 	}
 	api.RequestOK(ctx, allAG)
 }
@@ -96,15 +89,15 @@ func (s *Server) deleteAttributeGroup(ctx *gin.Context) {
 }
 
 func (s *Server) getAllAttribute(ctx *gin.Context) {
-	allAttribute := &[]store.Attribute{}
-	query := fmt.Sprintf("match (a:Attribute) return a")
-	properties := map[string]interface{}{}
-	err := store.GetSession(true).Query(query, properties, allAttribute)
+	limit := ctx.DefaultQuery("page_size", "10")
+	pageNumber := ctx.DefaultQuery("page_number", "1")
+
+	attributeList, err := s.AttributeService.GetAttributeList(limit, pageNumber)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, allAttribute)
+	api.RequestOK(ctx, attributeList)
 }
 
 func (s *Server) getAttribute(ctx *gin.Context) {

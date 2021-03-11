@@ -3,13 +3,13 @@ package service
 import (
 	"fmt"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
+	"strconv"
 )
 
 type AttributeService struct {
 	AttributeGroup store.AttributeGroup
 	Attribute      store.Attribute
 }
-
 
 func (as *AttributeService) CheckExists(modelType, uuid string) bool {
 	switch modelType {
@@ -28,7 +28,6 @@ func (as *AttributeService) CheckExists(modelType, uuid string) bool {
 	}
 	return false
 }
-
 
 func (as *AttributeService) ChangeModelGroup(uuid string) error {
 	if err := as.AttributeGroup.Get(uuid); err != nil {
@@ -57,3 +56,52 @@ func (as *AttributeService) CleanModelGroup(uuid string) error {
 	return nil
 }
 
+func (as *AttributeService) GetAttributeGroupList(limit string, pageNumber string) (*[]store.AttributeGroup, error) {
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil || limitInt < 0 {
+		return nil, err
+	}
+	pageNumberInt, err := strconv.Atoi(pageNumber)
+	if err != nil || pageNumberInt < 0 {
+		return nil, err
+	}
+	allAG := make([]store.AttributeGroup, 0)
+	query := fmt.Sprintf("match (a:AttributeGroup) return a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit")
+	properties := map[string]interface{}{
+		"skip":  (pageNumberInt - 1) * limitInt,
+		"limit": limitInt,
+	}
+	if err := store.GetSession(true).Query(query, properties, allAG); err != nil {
+		return nil, err
+	}
+	for i, v := range allAG {
+		attribute := make([]*store.Attribute, 0)
+		if err := as.Attribute.LoadAll(&attribute, v.UUID); err != nil {
+			return nil, err
+		}
+		allAG[i].Attributes = attribute
+	}
+	return &allAG, nil
+}
+
+func (as *AttributeService) GetAttributeList(limit string, pageNumber string) (*[]store.Attribute, error) {
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil || limitInt < 0 {
+		return nil, err
+	}
+	pageNumberInt, err := strconv.Atoi(pageNumber)
+	if err != nil || pageNumberInt < 0 {
+		return nil, err
+	}
+
+	attributeList := make([]store.Attribute, 0)
+	query := fmt.Sprintf("match (a:Attribute) return a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit")
+	properties := map[string]interface{}{
+		"skip":  (pageNumberInt - 1) * limitInt,
+		"limit": limitInt,
+	}
+	if err := store.GetSession(true).Query(query, properties, attributeList); err != nil {
+		return nil, err
+	}
+	return &attributeList, nil
+}

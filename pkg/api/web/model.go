@@ -9,20 +9,13 @@ import (
 )
 
 func (s *Server) getAllGroup(ctx *gin.Context) {
-	allMG := make([]store.ModelGroup, 0)
-	query := fmt.Sprintf("match (a:ModelGroup) return a")
-	err := store.GetSession(true).Query(query, map[string]interface{}{}, &allMG)
+	limit := ctx.DefaultQuery("page_size", "10")
+	pageNumber := ctx.DefaultQuery("page_number", "1")
+
+	allMG, err := s.ModelService.GetGroupList(limit, pageNumber)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
-	}
-	for i, v := range allMG {
-		models := make([]*store.Model, 0)
-		if err := s.Model.LoadAll(&models, v.Uid); err != nil {
-			api.RequestErr(ctx, err)
-			return
-		}
-		allMG[i].Models = models
 	}
 	api.RequestOK(ctx, allMG)
 }
@@ -90,10 +83,10 @@ func (s *Server) deleteGroup(ctx *gin.Context) {
 }
 
 func (s *Server) getAllModel(ctx *gin.Context) {
-	allModel := &[]store.Model{}
-	query := fmt.Sprintf("match (a:Model) return a")
-	properties := map[string]interface{}{}
-	err := store.GetSession(true).Query(query, properties, allModel)
+	limit := ctx.DefaultQuery("page_size", "10")
+	pageNumber := ctx.DefaultQuery("page_number", "1")
+
+	allModel, err := s.ModelService.GetModelList(limit, pageNumber)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return

@@ -68,9 +68,9 @@ func (m *Model) Get(uuid string) error {
 }
 
 func (m *Model) LoadAll(mList *[]*Model, groupId string) error {
-	query := fmt.Sprintf("match (a:Model)-[r:GroupBy]->(b:ModelGroup)where b.uid=$uid return a")
+	query := fmt.Sprintf("match (a:Model)-[r:GroupBy]->(b:ModelGroup)where b.uuid=$uuid return a")
 	properties := map[string]interface{}{
-		"uid": groupId,
+		"uuid": groupId,
 	}
 	err := GetSession(true).Query(query, properties, mList)
 	if err != nil {
