@@ -17,7 +17,7 @@ type ModelAttributeVisibleVO struct {
 	Visible bool   `json:"visible"`
 }
 
-type SimpleModelVO struct {
+type ModelMenuVO struct {
 	Uid  string `json:"uid"`
 	Name string `json:"name"`
 }
@@ -31,6 +31,6 @@ type ResourcePageListVO struct {
 }
 
 type ConfigModelAttributeVO struct {
-	ModelUid string                     `json:"modelUid"`
-	Columns  *[]ModelAttributeVisibleVO `json:"columns"`
+	Uid     string                     `json:"uid"`
+	Columns *[]ModelAttributeVisibleVO `json:"columns"`
 }

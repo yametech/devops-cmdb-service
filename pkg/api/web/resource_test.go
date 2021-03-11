@@ -3,7 +3,9 @@ package web
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mindstand/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
+	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -37,11 +39,42 @@ func printOut(obj interface{}) {
 	fmt.Println(string(b))
 }
 
+func TestRelation(t *testing.T) {
+	// RelationTest
+	// MATCH (a:Model), (b:Model)
+	//WHERE a.uid = 'host' AND b.uid = 'cabinet'
+	//CREATE (a)-[:Relation {uid:"host_belong_cabinet", relationshipUid:"belong", constraint:"1 - 1", sourceUid:"host", targetUid:"cabinet"}]->(b);
+	// query := "match (a:Model)-[r:Relation]-(b:Model) where r.uid = 'host_belong_cabinet' return distinct  r "
+	query := "match (a:Model)-[r:Relation]-(b:Model) where a.uid = $modelUid or b.uid = $modelUid return distinct  r"
+
+	session := store.GetSession(true)
+	//relation := store.Relation{}
+	result, _ := session.QueryRaw(query, map[string]interface{}{"modelUid": "hostss"})
+	//fmt.Printf("%T\n", result[0][0])
+
+	if result == nil {
+		printOut("bingo")
+	}
+	for _, wrap := range result {
+		relationship := wrap[0].(*gogm.RelationshipWrap)
+		relation := &store.ModelRelation{}
+		utils.SimpleConvert(relation, relationship.Props)
+		printOut(relation)
+	}
+	printOut(result)
+	relationship := result[0][0].(*gogm.RelationshipWrap)
+	relation := &store.ModelRelation{}
+	utils.SimpleConvert(relation, relationship.Props)
+	printOut(relation)
+	printOut(relationship.Props)
+
+}
+
 func TestMyTest(t *testing.T) {
-	//model := &[]store.Resource{}
-	model := make([]store.Resource, 0)
-	(&store.Neo4jDomain{}).Get(&model, "modelUid", "host")
-	printOut(model)
+	session := store.GetSession(true)
+	query := "match (a:Model)-[r:Relation]-(b:Model) where r.uid = $uid return distinct  r"
+	result, _ := session.QueryRaw(query, map[string]interface{}{"uid": "cabinet_belong_host"})
+	printOut(result[0][0])
 }
 
 func TestGetModel(t *testing.T) {

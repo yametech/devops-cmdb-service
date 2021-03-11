@@ -36,14 +36,14 @@ func (rs *ResourceService) SetModelAttribute(modelUid string, result *[]common.M
 	return nil
 }
 
-func (rs *ResourceService) GetModeList() interface{} {
+func (rs *ResourceService) GetAllModeList() interface{} {
 	modelList := &[]store.Model{}
 	rs.Neo4jDomain.List(modelList)
 	return modelList
 }
 
 // 获取模型实例列表
-func (rs *ResourceService) GetResourcePageList(modelUid string, currentPage int, pageSize int) interface{} {
+func (rs *ResourceService) GetResourcePageList(modelUid string, pageNumber int, pageSize int) interface{} {
 	srcList := &[]store.Resource{}
 	totalRaw, err := rs.ManualQueryRaw("MATCH (a:Resource {modelUid:$modelUid}) RETURN COUNT(a)",
 		map[string]interface{}{"modelUid": modelUid})
@@ -57,7 +57,7 @@ func (rs *ResourceService) GetResourcePageList(modelUid string, currentPage int,
 	}
 
 	rs.ManualQuery("MATCH (a:Resource {modelUid:$modelUid}) RETURN a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit",
-		map[string]interface{}{"modelUid": modelUid, "skip": (currentPage - 1) * pageSize, "limit": pageSize}, srcList)
+		map[string]interface{}{"modelUid": modelUid, "skip": (pageNumber - 1) * pageSize, "limit": pageSize}, srcList)
 
 	printOut(srcList)
 
