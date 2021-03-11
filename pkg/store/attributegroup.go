@@ -16,10 +16,10 @@ type AttributeGroup struct {
 	CommonObj
 }
 
-func (m *AttributeGroup) Get(uid string) error {
-	query := fmt.Sprintf("match (a:AttributeGroup) where a.uid = $uid return a")
+func (m *AttributeGroup) Get(uuid string) error {
+	query := fmt.Sprintf("match (a:AttributeGroup) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
-		"uid": uid,
+		"uuid": uuid,
 	}
 	return GetSession(false).Query(query, properties, m)
 }

@@ -25,18 +25,18 @@ func (mg *ModelGroup) Update() error {
 	return GetSession(false).Save(mg)
 }
 
-func (mg *ModelGroup) Get(uid string) error {
-	query := fmt.Sprintf("match (a:ModelGroup) where a.uid = $uid return a")
+func (mg *ModelGroup) Get(uuid string) error {
+	query := fmt.Sprintf("match (a:ModelGroup) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
-		"uid": uid,
+		"uuid": uuid,
 	}
 	return GetSession(false).Query(query, properties, mg)
 }
 
-func (mg *ModelGroup) Delete(uid string) error {
-	query := fmt.Sprintf("match (a:ModelGroup) where a.uid = $uid return a")
+func (mg *ModelGroup) Delete(uuid string) error {
+	query := fmt.Sprintf("match (a:ModelGroup) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
-		"uid": uid,
+		"uuid": uuid,
 	}
 	session := GetSession(false)
 	if err := session.Query(query, properties, mg); err != nil {
