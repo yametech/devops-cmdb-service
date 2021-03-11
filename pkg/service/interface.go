@@ -30,7 +30,7 @@ func init() {
 	flag.StringVar(&password, "password", "123456", "-password xxxx")
 	flag.Parse()
 	fmt.Println("Neo4jInit....start")
-	store.Neo4jInit("localhost", "neo4j", "123456")
+	store.Neo4jInit(host, username, password)
 	fmt.Println("Neo4jInit....end")
 }
 

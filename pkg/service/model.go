@@ -44,8 +44,8 @@ func (as *ModelService) ChangeModelGroup(uuid string) error {
 	return nil
 }
 
-func (as *ModelService) CleanModelGroup(uid string) error {
-	if err := as.ModelGroup.Get(uid); err != nil {
+func (as *ModelService) CleanModelGroup(uuid string) error {
+	if err := as.ModelGroup.Get(uuid); err != nil {
 		return err
 	}
 	as.Model.ModelGroup = &as.ModelGroup
