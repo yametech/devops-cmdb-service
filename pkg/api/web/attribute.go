@@ -36,10 +36,23 @@ func (s *Server) createAttributeGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
+	unstructured := make(map[string]interface{})
+	if err := json.Unmarshal(rawData, &unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	modelUUID := fmt.Sprintf("%v", unstructured["modeluuid"])
+	if err := s.Model.Get(modelUUID); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+
 	if err := json.Unmarshal(rawData, &s.AttributeGroup); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
+	s.AttributeGroup.Model = &s.Model
+	s.AttributeGroup.ModelUid = s.Model.Uid
 	err = s.AttributeGroup.Save()
 	if err != nil {
 		api.RequestErr(ctx, err)
