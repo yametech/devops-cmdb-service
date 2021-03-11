@@ -60,10 +60,10 @@ func (a *Attribute) LoadAll(aList *[]*Attribute, groupId string) error {
 	return nil
 }
 
-func (m *Attribute) Get(uid string) error {
-	query := fmt.Sprintf("match (a:Attribute) where a.uid = $uid return a")
+func (m *Attribute) Get(uuid string) error {
+	query := fmt.Sprintf("match (a:Attribute) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
-		"uid": uid,
+		"uuid": uuid,
 	}
 	return GetSession(false).Query(query, properties, m)
 }

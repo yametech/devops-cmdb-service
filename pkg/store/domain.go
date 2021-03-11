@@ -62,7 +62,8 @@ type ModelRelation struct {
 
 type Model struct {
 	gogm.BaseNode
-	Uid             string            `json:"uid" gogm:"unique;name=uid"`
+	Uid string `json:"uid" gogm:"unique;name=uid"`
+	//Uuid             string            `json:"Uuid" gogm:"unique;name=uuid"`
 	Name            string            `json:"name" gogm:"name=name"`
 	IconUrl         string            `json:"iconUrl" gogm:"name=iconUrl"`
 	ModelGroup      *ModelGroup       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
@@ -78,18 +79,18 @@ func (cm *CommonObj) InitCommonObj(creator string) {
 	cm.Editor = creator
 }
 
-func (m *Model) Get(uid string) error {
-	query := fmt.Sprintf("match (a:Model) where a.uid = $uid return a")
+func (m *Model) Get(uuid string) error {
+	query := fmt.Sprintf("match (a:Model) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
-		"uid": uid,
+		"uuid": uuid,
 	}
 	return GetSession(false).Query(query, properties, m)
 }
 
 func (m *Model) LoadAll(mList *[]*Model, groupId string) error {
-	query := fmt.Sprintf("match (a:Model)-[r:GroupBy]->(b:ModelGroup)where b.uid=$uid return a")
+	query := fmt.Sprintf("match (a:Model)-[r:GroupBy]->(b:ModelGroup)where b.uuid=$uuid return a")
 	properties := map[string]interface{}{
-		"uid": groupId,
+		"uuid": groupId,
 	}
 	err := GetSession(true).Query(query, properties, mList)
 	if err != nil {
@@ -109,10 +110,10 @@ func (m *Model) Update() error {
 	return GetSession(false).Save(m)
 }
 
-func (m *Model) Delete(uid string) error {
-	query := fmt.Sprintf("match (a:Model) where a.uid = $uid return a")
+func (m *Model) Delete(uuid string) error {
+	query := fmt.Sprintf("match (a:Model) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
-		"uid": uid,
+		"uuid": uuid,
 	}
 	session := GetSession(false)
 	if err := session.Query(query, properties, m); err != nil {

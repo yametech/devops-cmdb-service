@@ -24,28 +24,28 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.GET("/member", server.ListMemberApi)
 
 	groupRoute.GET("/model-group", server.getAllGroup)
-	groupRoute.GET("/model-group/:uid", server.getGroup)
+	groupRoute.GET("/model-group/:uuid", server.getGroup)
 	groupRoute.POST("/model-group", server.createGroup)
-	groupRoute.PUT("/model-group/:uid", server.putGroup)
-	groupRoute.DELETE("/model-group/:uid", server.deleteGroup)
+	groupRoute.PUT("/model-group/:uuid", server.putGroup)
+	groupRoute.DELETE("/model-group/:uuid", server.deleteGroup)
 
 	groupRoute.GET("/model", server.getAllModel)
-	groupRoute.GET("/model/:uid", server.getModel)
+	groupRoute.GET("/model/:uuid", server.getModel)
 	groupRoute.POST("/model", server.createModel)
-	groupRoute.PUT("/model/:uid", server.putModel)
-	groupRoute.DELETE("/model/:uid", server.deleteModel)
+	groupRoute.PUT("/model/:uuid", server.putModel)
+	groupRoute.DELETE("/model/:uuid", server.deleteModel)
 
 	groupRoute.GET("/attribute-group", server.getAllAttributeGroup)
-	groupRoute.GET("/attribute-group/:uid", server.getAttributeGroup)
+	groupRoute.GET("/attribute-group/:uuid", server.getAttributeGroup)
 	groupRoute.POST("/attribute-group", server.createAttributeGroup)
-	groupRoute.PUT("/attribute-group/:uid", server.putAttributeGroup)
-	groupRoute.DELETE("/attribute-group/:uid", server.deleteAttributeGroup)
+	groupRoute.PUT("/attribute-group/:uuid", server.putAttributeGroup)
+	groupRoute.DELETE("/attribute-group/:uuid", server.deleteAttributeGroup)
 
 	groupRoute.GET("/attribute", server.getAllAttribute)
-	groupRoute.GET("/attribute/:uid", server.getAttribute)
+	groupRoute.GET("/attribute/:uuid", server.getAttribute)
 	groupRoute.POST("/attribute", server.createAttribute)
-	groupRoute.PUT("/attribute/:uid", server.putAttribute)
-	groupRoute.DELETE("/attribute/:uid", server.deleteAttribute)
+	groupRoute.PUT("/attribute/:uuid", server.putAttribute)
+	groupRoute.DELETE("/attribute/:uuid", server.deleteAttribute)
 
 	// resource
 	resource := &ResourceApi{&service.ResourceService{}}
