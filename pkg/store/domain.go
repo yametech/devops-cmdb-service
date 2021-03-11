@@ -28,15 +28,35 @@ type RelationshipModel struct {
 	CommonObj
 }
 
+type ModelRelationTest struct {
+	gogm.BaseNode
+	Start      *Model
+	End        *Model
+	Constraint string `json:"constraint" gogm:"name=constraint"`
+	// 源uid
+	SourceUid string `json:"sourceUid" gogm:"name=sourceUid"`
+	// 目标uid
+	TargetUid string `json:"targetUid" gogm:"name=targetUid"`
+	// 关系类型uid
+	RelationshipUid string `json:"relationshipUid" gogm:"name=relationshipUid"`
+	CommonObj
+}
+
 // 模型关系
 type ModelRelation struct {
-	gogm.BaseNode
-	Uid             string `json:"uid" gogm:"name=uid"`
-	RelationshipUid string `json:"relationshipUid" gogm:"name=relationshipUid"`
-	Constraint      string `json:"constraint" gogm:"name=constraint"`
-	SourceUid       string `json:"sourceUid" gogm:"name=sourceUid"`
-	TargetUid       string `json:"targetUid" gogm:"name=targetUid"`
-	Comment         string `json:"comment" gogm:"name=comment"`
+	//gogm.BaseNode
+	//Uid             string `json:"uid" gogm:"name=uid"`
+	//RelationshipUid string `json:"relationshipUid" gogm:"name=relationshipUid"`
+	//Constraint      string `json:"constraint" gogm:"name=constraint"`
+	//SourceUid       string `json:"sourceUid" gogm:"name=sourceUid"`
+	//TargetUid       string `json:"targetUid" gogm:"name=targetUid"`
+	//Comment         string `json:"comment" gogm:"name=comment"`
+	Uid             string `json:"uid"`
+	RelationshipUid string `json:"relationshipUid"`
+	Constraint      string `json:"constraint"`
+	SourceUid       string `json:"sourceUid"`
+	TargetUid       string `json:"targetUid"`
+	Comment         string `json:"comment"`
 	CommonObj
 }
 

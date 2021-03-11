@@ -89,7 +89,7 @@ func (rs *ResourceService) DeleteResource(uuid string) error {
 		return err
 	}
 
-	query := "match (a:Resource)-[]-(b:AttributeGroupIns)-[]-(c:AttributeIns) where a.uuid = $uuid detach  delete a,b,c"
+	query := "match (a:Resource)-[]-(b:AttributeGroupIns)-[]-(c:AttributeIns) where a.uuid = $uuid detach delete a,b,c"
 	_, err = rs.ManualExecute(query, map[string]interface{}{"uuid": uuid})
 	return err
 }

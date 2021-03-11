@@ -58,6 +58,11 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.DELETE("/resource/delete-resource/:uuid", resource.DeleteResource)
 	groupRoute.PUT("/resource/resource-attribute-update", resource.UpdateResourceAttribute)
 
+	// relationship
+	relationship := &RelationshipApi{&service.RelationshipService{}}
+	groupRoute.GET("/model/model-relation-list", relationship.GetModelRelationList)
+	groupRoute.POST("/model/add-model-relation", relationship.AddModelRelation)
+
 	return server
 }
 
