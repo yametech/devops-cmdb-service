@@ -22,7 +22,7 @@ type ModelMenuVO struct {
 	Name string `json:"name"`
 }
 
-type ResourcePageListVO struct {
+type ResourceListPageVO struct {
 	Id         int64             `json:"id"`
 	Uuid       string            `json:"uuid"`
 	ModelUid   string            `json:"modelUid"`
@@ -33,4 +33,15 @@ type ResourcePageListVO struct {
 type ConfigModelAttributeVO struct {
 	Uid     string                     `json:"uid"`
 	Columns *[]ModelAttributeVisibleVO `json:"columns"`
+}
+
+type ResourceRelationListPageVO struct {
+	RelationshipUid  string                     `json:"relationshipUid"`
+	RelationshipName string                     `json:"relationshipName"`
+	SourceUid        string                     `json:"sourceUid"`
+	SourceName       string                     `json:"sourceName"`
+	TargetUid        string                     `json:"targetUid"`
+	TargetName       string                     `json:"targetName"`
+	ModelAttributes  *[]ModelAttributeVisibleVO `json:"modelAttributes"`
+	Resources        *[]map[string]string       `json:"resources"`
 }

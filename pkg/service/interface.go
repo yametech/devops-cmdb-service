@@ -1,7 +1,6 @@
 package service
 
 import (
-	"flag"
 	"fmt"
 	"github.com/yametech/devops-cmdb-service/pkg/core"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
@@ -24,13 +23,13 @@ func (f *fakeService) GetMember(uuid string) core.IObject {
 }
 
 func init() {
-	var host, username, password string
-	flag.StringVar(&host, "host", "localhost", "-host xxxx")
-	flag.StringVar(&username, "username", "neo4j", "-username xxxx")
-	flag.StringVar(&password, "password", "123456", "-password xxxx")
-	flag.Parse()
+	//var host, username, password string
+	//flag.StringVar(&host, "host", "localhost", "-host xxxx")
+	//flag.StringVar(&username, "username", "neo4j", "-username xxxx")
+	//flag.StringVar(&password, "password", "123456", "-password xxxx")
+	//flag.Parse()
 	fmt.Println("Neo4jInit....start")
-	store.Neo4jInit(host, username, password)
+	store.Neo4jInit("localhost", "neo4j", "123456")
 	fmt.Println("Neo4jInit....end")
 }
 

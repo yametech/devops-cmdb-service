@@ -48,7 +48,7 @@ func (r *ResourceApi) addResource(ctx *gin.Context) {
 }
 
 // 获取模型实例列表
-func (r *ResourceApi) getResourcePageList(ctx *gin.Context) {
+func (r *ResourceApi) getResourceListPage(ctx *gin.Context) {
 	pageSizeStr := ctx.DefaultQuery("page_size", "10")
 	pageNumberStr := ctx.DefaultQuery("page_number", "1")
 	pageSize, err := strconv.Atoi(pageSizeStr)
@@ -62,7 +62,7 @@ func (r *ResourceApi) getResourcePageList(ctx *gin.Context) {
 		return
 	}
 
-	Success(ctx, r.resourceService.GetResourcePageList(ctx.Query("modelUid"), pageNumber, pageSize))
+	Success(ctx, r.resourceService.GetResourceListPage(ctx.Query("modelUid"), pageNumber, pageSize))
 }
 
 func (r *ResourceApi) getResourceDetail(ctx *gin.Context) {

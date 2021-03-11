@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mindstand/gogm"
+	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"time"
@@ -124,4 +125,103 @@ func (ms *RelationshipService) AddModelRelation(body string, operator string) (i
 	result, err = ms.ManualExecute(query, map[string]interface{}{"sourceUid": relation.SourceUid, "targetUid": relation.TargetUid,
 		"uid": relation.Uid, "relationshipUid": relation.RelationshipUid, "constraint": relation.Constraint, "comment": relation.Comment})
 	return result, err
+}
+
+func (ms RelationshipService) GetResourceRelationList(uuid string) (interface{}, error) {
+	query := "match (a:Resource)-[r:Relation]-(b:Resource) where a.uuid = $uuid return a,r,b"
+	result, err := ms.ManualQueryRaw(query, map[string]interface{}{"uuid": uuid})
+	printOut(result)
+
+	voList := &[]common.ResourceRelationListPageVO{}
+	for _, row := range result {
+		addResourceRelationList(voList, row)
+	}
+
+	return voList, err
+}
+
+// TODO 解决方向的问题
+func addResourceRelationList(result *[]common.ResourceRelationListPageVO, row []interface{}) {
+	if row == nil {
+		return
+	}
+	if result == nil {
+		r := make([]common.ResourceRelationListPageVO, 0)
+		result = &r
+	}
+	pageVO := convert2ResourceRelationListPageVO(row)
+
+	newRelation := false
+	for _, vo := range *result {
+		if vo.SourceUid == pageVO.SourceUid {
+			newRelation = true
+			// 资源信息添加进去
+			*vo.Resources = append(*vo.Resources, (*pageVO.Resources)[0])
+		}
+	}
+	// 新的数据
+	if !newRelation {
+		// 资源字段
+		resourceService := &ResourceService{}
+		modelAttributes := &[]common.ModelAttributeVisibleVO{}
+		utils.SimpleConvert(modelAttributes, resourceService.GetModelAttributeList(pageVO.TargetUid))
+		pageVO.ModelAttributes = modelAttributes
+
+		*result = append(*result, *pageVO)
+	}
+}
+
+func convert2ResourceRelationListPageVO(row []interface{}) *common.ResourceRelationListPageVO {
+	a := row[0].(*gogm.NodeWrap)
+	r := row[1].(*gogm.RelationshipWrap)
+	b := row[2].(*gogm.NodeWrap)
+	startSource := &store.Resource{}
+	endSource := &store.Resource{}
+
+	// 根据关系信息找到方向,比如：a-r->b
+	if r.StartId == a.Id {
+		utils.SimpleConvert(startSource, &a.Props)
+		utils.SimpleConvert(endSource, &b.Props)
+	} else {
+		utils.SimpleConvert(endSource, &a.Props)
+		utils.SimpleConvert(startSource, &b.Props)
+	}
+	vo := &common.ResourceRelationListPageVO{}
+	vo.SourceUid = startSource.ModelUid
+	vo.SourceName = startSource.ModelName
+	vo.TargetUid = endSource.ModelUid
+	vo.TargetName = endSource.ModelName
+	vo.RelationshipUid = r.Props["uid"].(string)
+
+	// 资源实例
+	resource := map[string]string{}
+	resource["uuid"] = endSource.UUID
+	resources := make([]map[string]string, 0)
+	resources = append(resources, resource)
+	vo.Resources = &resources
+	//TODO 补充资源实例， 自身在2个方向的数据
+
+	return vo
+}
+
+func (ms RelationshipService) DeleteResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
+	query := "match (a:Resource)-[r:Relation]-(b:Resource) where r.uid = $uid and a.uuid = $sourceUid and b.uuid = $targetUid delete  r"
+	return ms.ManualExecute(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
+}
+
+func (ms RelationshipService) AddResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
+	result, err := ms.GetResourceRelation(sourceUUID, targetUUID, uid)
+	if result != nil {
+		return nil, errors.New("已存在该资源关系")
+	}
+
+	query := "MATCH (a:Resource), (b:Resource) WHERE a.uuid = $sourceUUID AND b.uuid= $targetUUID " +
+		"CREATE (a)-[:Relation {uid: $uid}]->(b)"
+	result, err = ms.ManualExecute(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
+	return result, err
+}
+
+func (ms RelationshipService) GetResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
+	query := "match (a:Resource)-[r:Relation]-(b:Resource) where r.uid = $uid and a.uuid = $sourceUUID and b.uuid = $targetUUID return distinct  r"
+	return ms.ManualQueryRaw(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
 }

@@ -22,7 +22,7 @@ func (rs *ResourceService) GetModelAttributeList(modelUid string) interface{} {
 	a := &[]store.Attribute{}
 	rs.Neo4jDomain.Get(a, "modelUid", modelUid)
 	//rs.ManualQuery("MATCH (a:Attribute {modelUid:$modelUid}) RETURN a", map[string]interface{}{"modelUid": modelUid}, a)
-	fmt.Printf("%#v", a)
+	//fmt.Printf("%#v", a)
 	return a
 }
 
@@ -43,7 +43,7 @@ func (rs *ResourceService) GetAllModeList() interface{} {
 }
 
 // 获取模型实例列表
-func (rs *ResourceService) GetResourcePageList(modelUid string, pageNumber int, pageSize int) interface{} {
+func (rs *ResourceService) GetResourceListPage(modelUid string, pageNumber int, pageSize int) interface{} {
 	srcList := &[]store.Resource{}
 	totalRaw, err := rs.ManualQueryRaw("MATCH (a:Resource {modelUid:$modelUid}) RETURN COUNT(a)",
 		map[string]interface{}{"modelUid": modelUid})
@@ -67,7 +67,7 @@ func (rs *ResourceService) GetResourcePageList(modelUid string, pageNumber int, 
 	for _, srcResource := range *srcList {
 		resource := &store.Resource{}
 		store.GetSession(true).LoadDepth(resource, srcResource.UUID, 10)
-		vo := &common.ResourcePageListVO{}
+		vo := &common.ResourceListPageVO{}
 		utils.SimpleConvert(vo, resource)
 		attributes := make(map[string]string)
 		for _, srcAttributeGroupIns := range resource.AttributeGroupIns {
@@ -191,15 +191,6 @@ func (rs *ResourceService) UpdateResourceAttribute(uuid string, attributeInsValu
 	a.UpdateTime = time.Now().Unix()
 	a.Editor = editor
 	return rs.Save(a)
-}
-
-func fakeGetFullModel(rs *ResourceService) *store.Model {
-	jsonStr := "{\"id\":144,\"uuid\":\"fdec6cdf-72e8-4966-a23b-5d4990574094\",\"uid\":\"host\",\"name\":\"主机\",\"iconUrl\":\"\",\"attributeGroups\":[{\"id\":143,\"uuid\":\"83e3088e-dd38-4469-a5c8-e703a3863e32\",\"uid\":\"baseInfo\",\"name\":\"基本属性\",\"modelUid\":\"host\",\"attributes\":[{\"id\":142,\"uuid\":\"e066f7f1-d932-4994-8ab8-03332d61279c\",\"uid\":\"ip\",\"name\":\"网址\",\"valueType\":\"短字符串\",\"editable\":true,\"required\":false,\"defaultValue\":\"\",\"unit\":\"\",\"maximum\":\"\",\"minimum\":\"\",\"enums\":\"\",\"listValues\":\"\",\"tips\":\"\",\"regular\":\"(([01]{0,1}\\\\d{0,1}\\\\d|2[0-4]\\\\d|25[0-5])\\\\.){3}([01]{0,1}\\\\d{0,1}\\\\d|2[0-4]\\\\d|25[0-5])\",\"comment\":\"网址信息\",\"visible\":false,\"modelUid\":\"host\",\"creator\":\"\",\"editor\":\"\",\"createTime\":0,\"updateTime\":0}],\"creator\":\"\",\"editor\":\"\",\"createTime\":0,\"updateTime\":0},{\"id\":133,\"uuid\":\"bdb28935-6409-4344-88c5-b5b7a7bd117a\",\"uid\":\"otherInfo\",\"name\":\"其他属性\",\"modelUid\":\"host\",\"attributes\":[{\"id\":145,\"uuid\":\"67db51cc-180a-4c62-9926-b126a3961f00\",\"uid\":\"test\",\"name\":\"cesi\",\"valueType\":\"短字符串\",\"editable\":true,\"required\":false,\"defaultValue\":\"\",\"unit\":\"\",\"maximum\":\"\",\"minimum\":\"\",\"enums\":\"\",\"listValues\":\"\",\"tips\":\"\",\"regular\":\"(([01]{0,1}\\\\d{0,1}\\\\d|2[0-4]\\\\d|25[0-5])\\\\.){3}([01]{0,1}\\\\d{0,1}\\\\d|2[0-4]\\\\d|25[0-5])\",\"comment\":\"网址信息\",\"visible\":false,\"modelUid\":\"host\",\"creator\":\"\",\"editor\":\"\",\"createTime\":0,\"updateTime\":0}],\"creator\":\"\",\"editor\":\"\",\"createTime\":0,\"updateTime\":0}],\"resources\":null,\"creator\":\"\",\"editor\":\"\",\"createTime\":0,\"updateTime\":0}"
-	a := &store.Model{}
-
-	json.Unmarshal([]byte(jsonStr), a)
-	//printOut(a)
-	return a
 }
 
 func printOut(obj interface{}) {

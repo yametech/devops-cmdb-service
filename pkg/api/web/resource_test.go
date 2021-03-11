@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mindstand/gogm"
+	"github.com/yametech/devops-cmdb-service/pkg/service"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"io/ioutil"
@@ -71,10 +72,14 @@ func TestRelation(t *testing.T) {
 }
 
 func TestMyTest(t *testing.T) {
-	session := store.GetSession(true)
-	query := "match (a:Model)-[r:Relation]-(b:Model) where r.uid = $uid return distinct  r"
-	result, _ := session.QueryRaw(query, map[string]interface{}{"uid": "cabinet_belong_host"})
-	printOut(result[0][0])
+	relationshipService := service.RelationshipService{}
+	//res, _ := relationshipService.GetResourceRelationList("69906653-b834-4208-91e5-38fd262003d1")
+	res, _ := relationshipService.GetResourceRelationList("6ae509e1-f6a7-438d-b336-c96d33b64e34")
+	printOut(res)
+
+	//resourceService := service.ResourceService{}
+	//res := resourceService.GetModelAttributeList("host")
+	//printOut(res)
 }
 
 func TestGetModel(t *testing.T) {
@@ -133,4 +138,26 @@ func TestInit(t *testing.T) {
 	attribute2 := &store.Attribute{AttributeCommon: *attributeCommon2}
 	attribute2.AttributeGroup = attributeGroup2
 	session.SaveDepth(attribute2, 10)
+
+	// 使用服务
+	resourceService := service.ResourceService{}
+	body := "{\"modelUid\":\"host\",\"modelName\":\"主机\",\"attributeGroupIns\":[{\"uid\":\"baseInfo\",\"attributeIns\":[{\"uid\":\"ip\",\"attributeInsValue\":\"1\"},{\"uid\":\"cpu\",\"attributeInsValue\":\"12\"}]},{\"uid\":\"otherInfo\",\"attributeIns\":[{\"uid\":\"test\",\"attributeInsValue\":\"testttstset\"}]}]}"
+	resourceResult, err := resourceService.AddResource(body, "")
+	resourceResult3, err := resourceService.AddResource(body, "")
+
+	model2 := &store.Model{Uid: "cabinet", Name: "机柜"}
+	model2.ModelGroup = modelGroup
+	session.SaveDepth(model2, 2)
+
+	body2 := "{\"modelUid\":\"cabinet\",\"modelName\":\"机柜\",\"attributeGroupIns\":[{\"uid\":\"baseInfo\",\"attributeIns\":[{\"uid\":\"ip\",\"attributeInsValue\":\"1\"},{\"uid\":\"cpu\",\"attributeInsValue\":\"12\"}]},{\"uid\":\"otherInfo\",\"attributeIns\":[{\"uid\":\"test\",\"attributeInsValue\":\"testttstset\"}]}]}"
+	resourceResult2, err := resourceService.AddResource(body2, "")
+
+	relationshipService := service.RelationshipService{}
+	resource1 := resourceResult.(*store.Resource)
+	resource2 := resourceResult2.(*store.Resource)
+	resource3 := resourceResult3.(*store.Resource)
+	relationshipService.AddModelRelation("{\"relationshipUid\":\"belong\",\"constraint\":\"N - N\",\"sourceUid\":\"cabinet\",\"targetUid\":\"host\",\"comment\":\"描述信息\"}", "")
+
+	relationshipService.AddResourceRelation(resource1.UUID, resource2.UUID, "host_belong_cabinet")
+	relationshipService.AddResourceRelation(resource3.UUID, resource2.UUID, "host_belong_cabinet")
 }

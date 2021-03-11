@@ -51,7 +51,7 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.GET("/model-menu", resource.getModelMenu)
 	groupRoute.GET("/model-attribute/:uid", resource.getModelAttribute)
 	groupRoute.PUT("/model-attribute/:uid", resource.configModelAttribute)
-	groupRoute.GET("/resource", resource.getResourcePageList)
+	groupRoute.GET("/resource", resource.getResourceListPage)
 	groupRoute.GET("/resource/:uuid", resource.getResourceDetail)
 	groupRoute.POST("/resource", resource.addResource)
 	groupRoute.DELETE("/resource/:uuid", resource.deleteResource)
