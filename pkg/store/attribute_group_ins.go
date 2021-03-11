@@ -6,7 +6,7 @@ import (
 
 type AttributeGroupIns struct {
 	gogm.BaseNode
-	Uid          string          `json:"uid" gogm:"unique;name=uid"`
+	Uid          string          `json:"uid" gogm:"name=uid"`
 	Name         string          `json:"name" gogm:"name=name"`
 	ModelUid     string          `json:"modelUid" gogm:"name=modelUid"`
 	Resource     *Resource       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
@@ -29,7 +29,7 @@ func (obj *AttributeGroupIns) AddAttributeIns(target *AttributeIns) {
 	}
 
 	for _, attributeIns := range obj.AttributeIns {
-		if attributeIns.UUID == target.UUID {
+		if attributeIns.Uid == target.Uid {
 			return
 		}
 	}

@@ -6,11 +6,10 @@ type ApiResponseVO struct {
 	Msg  string      `json:"msg"`
 }
 
-//type Neo4jNode struct {
-//	Id     int64                  `json:"id"`
-//	Labels []string               `json:"labels"`
-//	Props  map[string]interface{} `json:"props"`
-//}
+type PageResultVO struct {
+	TotalCount int64         `json:"totalCount"`
+	List       []interface{} `json:"list"`
+}
 
 type ModelAttributeVisibleVO struct {
 	Uid     string `json:"uid"`
@@ -21,6 +20,14 @@ type ModelAttributeVisibleVO struct {
 type SimpleModelVO struct {
 	Uid  string `json:"uid"`
 	Name string `json:"name"`
+}
+
+type ResourcePageListVO struct {
+	Id         int64             `json:"id"`
+	Uuid       string            `json:"uuid"`
+	ModelUid   string            `json:"modelUid"`
+	ModelName  string            `json:"modelName"`
+	Attributes map[string]string `json:"attributes"`
 }
 
 type ConfigModelAttributeVO struct {

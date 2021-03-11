@@ -7,14 +7,10 @@ import (
 type Resource struct {
 	gogm.BaseNode
 	ModelUid          string               `json:"modelUid" gogm:"name=modelUid"`
-	ModelName         string               `json:"name" gogm:"name=modelName"`
+	ModelName         string               `json:"modelName" gogm:"name=modelName"`
 	Models            *Model               `json:"-" gogm:"direction=outgoing;relationship=Instance"`
 	AttributeGroupIns []*AttributeGroupIns `json:"attributeGroupIns" gogm:"direction=incoming;relationship=GroupBy"`
 	CommonObj
-}
-
-func (obj *Resource) Save() error {
-	return GetSession(false).Save(obj)
 }
 
 func (obj *Resource) AddAttributeGroupIns(target *AttributeGroupIns) {
@@ -28,7 +24,7 @@ func (obj *Resource) AddAttributeGroupIns(target *AttributeGroupIns) {
 	}
 
 	for _, attributeGroupIns := range obj.AttributeGroupIns {
-		if attributeGroupIns.UUID == target.UUID {
+		if attributeGroupIns.Uid == target.Uid {
 			return
 		}
 	}

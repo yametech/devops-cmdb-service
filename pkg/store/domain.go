@@ -14,6 +14,32 @@ type CommonObj struct {
 	UpdateTime int64  `json:"updateTime" gogm:"name=updateTime"`
 }
 
+// 关系模型
+type RelationshipModel struct {
+	gogm.BaseNode
+	Uid  string `json:"uid" gogm:"unique;name=uid"`
+	Name string `json:"name" gogm:"name=name"`
+	// 源->目标描述
+	Source2Target string `json:"source2Target" gogm:"name=source2Target"`
+	// 目标->源描述
+	Target2Source string `json:"target2Source" gogm:"name=target2Source"`
+	// direction 方向：源指向目标，无方向，双方向
+	Direction string `json:"direction" gogm:"name=direction"`
+	CommonObj
+}
+
+// 模型关系
+type ModelRelation struct {
+	gogm.BaseNode
+	Uid             string `json:"uid" gogm:"name=uid"`
+	RelationshipUid string `json:"relationshipUid" gogm:"name=relationshipUid"`
+	Constraint      string `json:"constraint" gogm:"name=constraint"`
+	SourceUid       string `json:"sourceUid" gogm:"name=sourceUid"`
+	TargetUid       string `json:"targetUid" gogm:"name=targetUid"`
+	Comment         string `json:"comment" gogm:"name=comment"`
+	CommonObj
+}
+
 type Model struct {
 	gogm.BaseNode
 	Uid string `json:"uid" gogm:"unique;name=uid"`
@@ -21,14 +47,16 @@ type Model struct {
 	Name            string            `json:"name" gogm:"name=name"`
 	IconUrl         string            `json:"iconUrl" gogm:"name=iconUrl"`
 	ModelGroup      *ModelGroup       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
-	AttributeGroups []*AttributeGroup `json:"-" gogm:"direction=incoming;relationship=GroupBy"`
-	Resources       []*Resource       `json:"-" gogm:"direction=incoming;relationship=Instance"`
+	AttributeGroups []*AttributeGroup `json:"attributeGroups" gogm:"direction=incoming;relationship=GroupBy"`
+	Resources       []*Resource       `json:"resources" gogm:"direction=incoming;relationship=Instance"`
 	CommonObj
 }
 
-type Search struct {
-	Uuid string
-	Uid  string
+func (cm *CommonObj) InitCommonObj(creator string) {
+	cm.CreateTime = time.Now().Unix()
+	cm.UpdateTime = time.Now().Unix()
+	cm.Creator = creator
+	cm.Editor = creator
 }
 
 func (m *Model) Get(uuid string) error {

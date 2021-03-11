@@ -7,7 +7,7 @@ import (
 
 type AttributeCommon struct {
 	//  唯一标识
-	Uid string `json:"uid" gogm:"unique;name=uid"`
+	Uid string `json:"uid" gogm:"name=uid"`
 	// 名称
 	Name string `json:"name" gogm:"name=name"`
 	// 类型:短字符,长字符,数字,浮点,枚举,日期,时间,用户,布尔,列表
