@@ -80,21 +80,21 @@ func (cm *CommonObj) InitCommonObj(creator string) {
 	cm.Editor = creator
 }
 
-func (m *Model) Get(uuid string) error {
+func (m *Model) Get(session *gogm.Session, uuid string) error {
 	query := fmt.Sprintf("match (a:Model) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
 		"uuid": uuid,
 	}
-	return GetSession(false).Query(query, properties, m)
+	return session.Query(query, properties, m)
 }
 
-func (m *Model) LoadAll(groupId string) ([]*Model, error) {
+func (m *Model) LoadAll(session *gogm.Session, groupId string) ([]*Model, error) {
 	mList := make([]*Model, 0)
 	query := fmt.Sprintf("match (a:Model)-[r:GroupBy]->(b:ModelGroup)where b.uuid=$uuid return a")
 	properties := map[string]interface{}{
 		"uuid": groupId,
 	}
-	err := GetSession(true).Query(query, properties, &mList)
+	err := session.Query(query, properties, &mList)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "data not found") {
@@ -105,19 +105,19 @@ func (m *Model) LoadAll(groupId string) ([]*Model, error) {
 	return mList, nil
 }
 
-func (m *Model) Save() error {
+func (m *Model) Save(session *gogm.Session) error {
 	m.CreateTime = time.Now().Unix()
 	m.UpdateTime = time.Now().Unix()
-	return GetSession(false).Save(m)
+	return session.Save(m)
 }
 
-func (m *Model) Update() error {
+func (m *Model) Update(session *gogm.Session) error {
 	m.UpdateTime = time.Now().Unix()
-	return GetSession(false).Save(m)
+	return session.Save(m)
 }
 
-func (m *Model) Delete() error {
-	return GetSession(false).Delete(m)
+func (m *Model) Delete(session *gogm.Session) error {
+	return session.Delete(m)
 }
 
 func (m *Model) GetAttributeGroupByUid(uid string) *AttributeGroup {

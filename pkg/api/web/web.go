@@ -15,24 +15,25 @@ type Server struct {
 
 func NewServer(apiServer api.IApiServer) *Server {
 	apiServer.GINEngine()
+	ms, as := api.NewService()
 	server := &Server{
 		apiServer,
-		&service.ModelService{},
-		&service.AttributeService{},
+		ms,
+		as,
 	}
 	groupRoute := apiServer.GINEngine().Group(common.WEB_API_GROUP)
 
 	groupRoute.POST("/model/model-group-list", server.getAllGroup)
-	groupRoute.POST("/model/model-group-detail/:uuid", server.getGroup)
+	groupRoute.POST("/model/model-group-detail", server.getGroup)
 	groupRoute.POST("/model/model-group-add", server.createGroup)
-	groupRoute.POST("/model/model-group-update/:uuid", server.putGroup)
-	groupRoute.POST("/model/model-group-delete/:uuid", server.deleteGroup)
+	groupRoute.POST("/model/model-group-update", server.putGroup)
+	groupRoute.POST("/model/model-group-delete", server.deleteGroup)
 
 	groupRoute.POST("/model/model-list", server.getAllModel)
-	groupRoute.POST("/model/model-detail/:uuid", server.getModel)
+	groupRoute.POST("/model/model-detail", server.getModel)
 	groupRoute.POST("/model/model-add", server.createModel)
-	groupRoute.POST("/model/model-update/:uuid", server.putModel)
-	groupRoute.POST("/model/model-delete/:uuid", server.deleteModel)
+	groupRoute.POST("/model/model-update", server.putModel)
+	groupRoute.POST("/model/model-delete", server.deleteModel)
 
 	groupRoute.GET("/attribute-group", server.getAllAttributeGroup)
 	groupRoute.GET("/attribute-group/:uuid", server.getAttributeGroup)

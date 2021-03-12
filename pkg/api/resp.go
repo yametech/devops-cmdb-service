@@ -16,6 +16,11 @@ func RequestErr(g *gin.Context, err error) {
 	g.Abort()
 }
 
+func RequestDataErr(g *gin.Context, data string, code int32) {
+	g.JSON(http.StatusOK, &message{Data: data, Msg: "request not match", Code: code})
+	g.Abort()
+}
+
 func RequestOK(g *gin.Context, data interface{}) {
 	g.JSON(http.StatusOK, &message{Data: data, Msg: "request success", Code: 200})
 	g.Abort()

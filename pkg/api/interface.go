@@ -1,6 +1,10 @@
 package api
 
-import "github.com/gin-gonic/gin"
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/yametech/devops-cmdb-service/pkg/service"
+	"github.com/yametech/devops-cmdb-service/pkg/store"
+)
 
 type IApiServer interface {
 	Run() error
@@ -22,6 +26,13 @@ func (b *BaseServer) GINEngine() *gin.Engine {
 func NewBaseServer(addr string) IApiServer {
 	baseServer := &BaseServer{e: gin.Default(), addrs: []string{addr}}
 	return baseServer
+}
+
+func NewService() (*service.ModelService, *service.AttributeService) {
+	session := store.GetSession(false)
+	ms := &service.ModelService{Session: session}
+	as := &service.AttributeService{Session: session}
+	return ms, as
 }
 
 func (b *BaseServer) Run() error {

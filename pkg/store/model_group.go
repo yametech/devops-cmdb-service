@@ -14,25 +14,25 @@ type ModelGroup struct {
 	CommonObj
 }
 
-func (mg *ModelGroup) Save() error {
+func (mg *ModelGroup) Save(session *gogm.Session) error {
 	mg.CreateTime = time.Now().Unix()
 	mg.UpdateTime = time.Now().Unix()
-	return GetSession(false).Save(mg)
+	return session.Save(mg)
 }
 
-func (mg *ModelGroup) Update() error {
+func (mg *ModelGroup) Update(session *gogm.Session) error {
 	mg.UpdateTime = time.Now().Unix()
-	return GetSession(false).Save(mg)
+	return session.Save(mg)
 }
 
-func (mg *ModelGroup) Get(uuid string) error {
+func (mg *ModelGroup) Get(session *gogm.Session, uuid string) error {
 	query := fmt.Sprintf("match (a:ModelGroup) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
 		"uuid": uuid,
 	}
-	return GetSession(false).Query(query, properties, mg)
+	return session.Query(query, properties, mg)
 }
 
-func (mg *ModelGroup) Delete() error {
-	return GetSession(false).Delete(mg)
+func (mg *ModelGroup) Delete(session *gogm.Session) error {
+	return session.Delete(mg)
 }
