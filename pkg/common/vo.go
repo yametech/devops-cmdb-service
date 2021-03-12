@@ -45,3 +45,12 @@ type ResourceRelationListPageVO struct {
 	ModelAttributes  *[]ModelAttributeVisibleVO `json:"modelAttributes"`
 	Resources        *[]map[string]string       `json:"resources"`
 }
+
+type UpdateModelRelationVO struct {
+	Uid             string `json:"uid"`
+	RelationshipUid string `json:"relationshipUid"`
+	Constraint      string `json:"constraint"`
+	SourceUid       string `json:"sourceUid"`
+	TargetUid       string `json:"targetUid"`
+	Comment         string `json:"comment"`
+}

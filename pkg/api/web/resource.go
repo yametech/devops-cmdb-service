@@ -16,6 +16,19 @@ type ResourceApi struct {
 	resourceService *service.ResourceService
 }
 
+func (r *ResourceApi) router(e *gin.Engine) {
+	groupRoute := e.Group(common.WEB_API_GROUP)
+	groupRoute.GET("/model-menu", r.getModelMenu)
+	groupRoute.GET("/model-attribute/:uid", r.getModelAttribute)
+	groupRoute.PUT("/model-attribute/:uid", r.configModelAttribute)
+	groupRoute.GET("/model-info/:uid", r.getModelInfoForIns)
+	groupRoute.GET("/resource", r.getResourceListPage)
+	groupRoute.GET("/resource/:uuid", r.getResourceDetail)
+	groupRoute.POST("/resource", r.addResource)
+	groupRoute.DELETE("/resource/:uuids", r.deleteResource)
+	groupRoute.PUT("/resource-attribute/:uuid", r.updateResourceAttribute)
+}
+
 // 获取资源实例字段列表
 func (r *ResourceApi) getModelAttribute(ctx *gin.Context) {
 	result := &[]common.ModelAttributeVisibleVO{}
@@ -25,9 +38,8 @@ func (r *ResourceApi) getModelAttribute(ctx *gin.Context) {
 
 // 模型字段预览显示设置
 func (r *ResourceApi) configModelAttribute(ctx *gin.Context) {
-	b, _ := ctx.GetRawData()
 	req := &common.ConfigModelAttributeVO{}
-	json.Unmarshal(b, req)
+	ctx.ShouldBindJSON(req)
 	r.resourceService.SetModelAttribute(req.Uid, req.Columns)
 	Success(ctx, nil)
 }
@@ -50,8 +62,8 @@ func (r *ResourceApi) addResource(ctx *gin.Context) {
 
 // 获取模型实例列表
 func (r *ResourceApi) getResourceListPage(ctx *gin.Context) {
-	pageSizeStr := ctx.DefaultQuery("page_size", "10")
-	pageNumberStr := ctx.DefaultQuery("page_number", "1")
+	pageSizeStr := ctx.DefaultQuery("pageSize", "10")
+	pageNumberStr := ctx.DefaultQuery("current", "1")
 	pageSize, err := strconv.Atoi(pageSizeStr)
 	if err != nil || pageSize <= 0 {
 		Error(ctx, "参数有误")
@@ -69,11 +81,14 @@ func (r *ResourceApi) getResourceListPage(ctx *gin.Context) {
 	} else {
 		rawData, _ := ctx.GetRawData()
 		queryMap := &map[string]string{}
-		err = json.Unmarshal(rawData, queryMap)
-		if err != nil {
-			Error(ctx, "参数有误")
-			return
+		if len(rawData) > 0 {
+			err = json.Unmarshal(rawData, queryMap)
+			if err != nil {
+				Error(ctx, "参数有误")
+				return
+			}
 		}
+
 		Success(ctx, r.resourceService.GetResourceListPageByMap(modelUid, pageNumber, pageSize, queryMap))
 	}
 

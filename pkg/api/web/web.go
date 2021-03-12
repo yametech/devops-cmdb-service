@@ -14,7 +14,7 @@ type Server struct {
 }
 
 func NewServer(apiServer api.IApiServer) *Server {
-	apiServer.GINEngine()
+	//apiServer.GINEngine()
 	ms, as := api.NewService()
 	server := &Server{
 		apiServer,
@@ -49,27 +49,11 @@ func NewServer(apiServer api.IApiServer) *Server {
 
 	// resource
 	resource := &ResourceApi{&service.ResourceService{}}
-	groupRoute.GET("/model-menu", resource.getModelMenu)
-	groupRoute.GET("/model-attribute/:uid", resource.getModelAttribute)
-	groupRoute.PUT("/model-attribute/:uid", resource.configModelAttribute)
-	groupRoute.GET("/model-info/:uid", resource.getModelInfoForIns)
-	groupRoute.GET("/resource", resource.getResourceListPage)
-	groupRoute.GET("/resource/:uuid", resource.getResourceDetail)
-	groupRoute.POST("/resource", resource.addResource)
-	groupRoute.DELETE("/resource/:uuids", resource.deleteResource)
-	groupRoute.PUT("/resource-attribute/:uuid", resource.updateResourceAttribute)
+	resource.router(apiServer.GINEngine())
 
 	// relationship
 	relationship := &RelationshipApi{&service.RelationshipService{}}
-	groupRoute.GET("/model-relation/:uid", relationship.getModelRelationList)
-	groupRoute.GET("/model-relation/:uid/usage", relationship.getModelRelationUsageCount)
-	groupRoute.POST("/model-relation", relationship.addModelRelation)
-	groupRoute.DELETE("/model-relation/:uid", relationship.deleteModelRelation)
-	groupRoute.PUT("/model-relation/:uid", relationship.updateModelRelation)
-
-	groupRoute.GET("/resource-relation/:uuid", relationship.getResourceRelationList)
-	groupRoute.POST("/resource-relation", relationship.addResourceRelation)
-	groupRoute.DELETE("/resource-relation", relationship.deleteResourceRelation)
+	relationship.router(apiServer.GINEngine())
 
 	return server
 }

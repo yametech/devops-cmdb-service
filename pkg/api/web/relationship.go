@@ -2,12 +2,27 @@ package web
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/service"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
 )
 
 type RelationshipApi struct {
 	relationshipService *service.RelationshipService
+}
+
+func (r *RelationshipApi) router(e *gin.Engine) {
+	groupRoute := e.Group(common.WEB_API_GROUP)
+
+	groupRoute.GET("/model-relation/:uid", r.getModelRelationList)
+	groupRoute.GET("/model-relation/:uid/usage", r.getModelRelationUsageCount)
+	groupRoute.POST("/model-relation", r.addModelRelation)
+	groupRoute.DELETE("/model-relation/:uid", r.deleteModelRelation)
+	groupRoute.PUT("/model-relation/:uid", r.updateModelRelation)
+
+	groupRoute.GET("/resource-relation/:uuid", r.getResourceRelationList)
+	groupRoute.POST("/resource-relation", r.addResourceRelation)
+	groupRoute.DELETE("/resource-relation", r.deleteResourceRelation)
 }
 
 func (r *RelationshipApi) addModelRelation(ctx *gin.Context) {
