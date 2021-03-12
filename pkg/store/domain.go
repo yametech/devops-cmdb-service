@@ -94,7 +94,7 @@ func (m *Model) LoadAll(groupId string) ([]*Model, error) {
 	properties := map[string]interface{}{
 		"uuid": groupId,
 	}
-	err := GetSession(true).Query(query, properties, mList)
+	err := GetSession(true).Query(query, properties, &mList)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "data not found") {
