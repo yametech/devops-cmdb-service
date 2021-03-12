@@ -7,7 +7,6 @@ import (
 	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/service"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
-	"strconv"
 	"strings"
 )
 
@@ -62,34 +61,45 @@ func (r *ResourceApi) addResource(ctx *gin.Context) {
 
 // 获取模型实例列表
 func (r *ResourceApi) getResourceListPage(ctx *gin.Context) {
-	pageSizeStr := ctx.DefaultQuery("pageSize", "10")
-	pageNumberStr := ctx.DefaultQuery("current", "1")
-	pageSize, err := strconv.Atoi(pageSizeStr)
-	if err != nil || pageSize <= 0 {
-		Error(ctx, "参数有误")
+	vo := &common.ResourceListPageParamVO{}
+	err := ctx.ShouldBindJSON(vo)
+	if err != nil {
+		println(err.Error())
+		Error(ctx, err.Error())
 		return
 	}
-	pageNumber, err := strconv.Atoi(pageNumberStr)
-	if err != nil || pageNumber <= 0 {
-		Error(ctx, "参数有误")
-		return
-	}
-	modelUid := ctx.Query("model_uid")
-	queryValue := ctx.Query("query_value")
-	if queryValue != "" {
-		Success(ctx, r.resourceService.GetResourceListPage(modelUid, queryValue, pageNumber, pageSize))
+
+	//pageSizeStr := ctx.DefaultQuery("pageSize", "10")
+	//pageNumberStr := ctx.DefaultQuery("current", "1")
+	//pageSize, err := strconv.Atoi(pageSizeStr)
+	//if err != nil || pageSize <= 0 {
+	//	Error(ctx, "参数有误")
+	//	return
+	//}
+	//pageNumber, err := strconv.Atoi(pageNumberStr)
+	//if err != nil || pageNumber <= 0 {
+	//	Error(ctx, "参数有误")
+	//	return
+	//}
+	//modelUid := ctx.Query("model_uid")
+	//queryValue := ctx.Query("query_value")
+	if vo.QueryValue != "" {
+		Success(ctx, r.resourceService.GetResourceListPage(vo.ModelUid, vo.QueryValue, vo.Current, vo.PageSize))
 	} else {
-		rawData, _ := ctx.GetRawData()
-		queryMap := &map[string]string{}
-		if len(rawData) > 0 {
-			err = json.Unmarshal(rawData, queryMap)
-			if err != nil {
-				Error(ctx, "参数有误")
-				return
-			}
+		//rawData, _ := ctx.GetRawData()
+		//queryMap := &map[string]string{}
+		//if len(rawData) > 0 {
+		//	err = json.Unmarshal(rawData, queryMap)
+		//	if err != nil {
+		//		Error(ctx, "参数有误")
+		//		return
+		//	}
+		//}
+		if vo.QueryMap == nil {
+			vo.QueryMap = &map[string]string{}
 		}
 
-		Success(ctx, r.resourceService.GetResourceListPageByMap(modelUid, pageNumber, pageSize, queryMap))
+		Success(ctx, r.resourceService.GetResourceListPageByMap(vo.ModelUid, vo.Current, vo.PageSize, vo.QueryMap))
 	}
 
 }
