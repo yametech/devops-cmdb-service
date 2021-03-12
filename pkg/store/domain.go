@@ -29,19 +29,19 @@ type RelationshipModel struct {
 	CommonObj
 }
 
-type ModelRelationTest struct {
-	gogm.BaseNode
-	Start      *Model
-	End        *Model
-	Constraint string `json:"constraint" gogm:"name=constraint"`
-	// 源uid
-	SourceUid string `json:"sourceUid" gogm:"name=sourceUid"`
-	// 目标uid
-	TargetUid string `json:"targetUid" gogm:"name=targetUid"`
-	// 关系类型uid
-	RelationshipUid string `json:"relationshipUid" gogm:"name=relationshipUid"`
-	CommonObj
-}
+//type ModelRelationTest struct {
+//	gogm.BaseNode
+//	Start      *Model
+//	End        *Model
+//	Constraint string `json:"constraint" gogm:"name=constraint"`
+//	// 源uid
+//	SourceUid string `json:"sourceUid" gogm:"name=sourceUid"`
+//	// 目标uid
+//	TargetUid string `json:"targetUid" gogm:"name=targetUid"`
+//	// 关系类型uid
+//	RelationshipUid string `json:"relationshipUid" gogm:"name=relationshipUid"`
+//	CommonObj
+//}
 
 // 模型关系
 type ModelRelation struct {
@@ -67,6 +67,7 @@ type Model struct {
 	//Uuid             string            `json:"Uuid" gogm:"unique;name=uuid"`
 	Name            string            `json:"name" gogm:"name=name"`
 	IconUrl         string            `json:"iconUrl" gogm:"name=iconUrl"`
+	Model           *Model            `json:"-" gogm:"direction=both;relationship=Relation"`
 	ModelGroup      *ModelGroup       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
 	AttributeGroups []*AttributeGroup `json:"attributeGroups" gogm:"direction=incoming;relationship=GroupBy"`
 	Resources       []*Resource       `json:"resources" gogm:"direction=incoming;relationship=Instance"`
@@ -78,6 +79,24 @@ func (cm *CommonObj) InitCommonObj(creator string) {
 	cm.UpdateTime = time.Now().Unix()
 	cm.Creator = creator
 	cm.Editor = creator
+}
+
+func (m *Model) AddAttributeGroup(target *AttributeGroup) {
+	if target == nil {
+		return
+	}
+
+	if m.AttributeGroups == nil {
+		m.AttributeGroups = make([]*AttributeGroup, 0)
+	}
+
+	for _, attributeGroup := range m.AttributeGroups {
+		if attributeGroup.Uid == target.Uid {
+			return
+		}
+	}
+
+	m.AttributeGroups = append(m.AttributeGroups, target)
 }
 
 func (m *Model) Get(session *gogm.Session, uuid string) error {

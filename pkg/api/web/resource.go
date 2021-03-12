@@ -8,6 +8,7 @@ import (
 	"github.com/yametech/devops-cmdb-service/pkg/service"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"strconv"
+	"strings"
 )
 
 type ResourceApi struct {
@@ -61,8 +62,21 @@ func (r *ResourceApi) getResourceListPage(ctx *gin.Context) {
 		Error(ctx, "参数有误")
 		return
 	}
+	modelUid := ctx.Query("model_uid")
+	queryValue := ctx.Query("query_value")
+	if queryValue != "" {
+		Success(ctx, r.resourceService.GetResourceListPage(modelUid, queryValue, pageNumber, pageSize))
+	} else {
+		rawData, _ := ctx.GetRawData()
+		queryMap := &map[string]string{}
+		err = json.Unmarshal(rawData, queryMap)
+		if err != nil {
+			Error(ctx, "参数有误")
+			return
+		}
+		Success(ctx, r.resourceService.GetResourceListPageByMap(modelUid, pageNumber, pageSize, queryMap))
+	}
 
-	Success(ctx, r.resourceService.GetResourceListPage(ctx.Query("modelUid"), pageNumber, pageSize))
 }
 
 func (r *ResourceApi) getResourceDetail(ctx *gin.Context) {
@@ -75,7 +89,8 @@ func (r *ResourceApi) getResourceDetail(ctx *gin.Context) {
 }
 
 func (r *ResourceApi) deleteResource(ctx *gin.Context) {
-	err := r.resourceService.DeleteResource(ctx.Param("uuid"))
+
+	err := r.resourceService.DeleteResource(strings.Split(ctx.Param("uuids"), ","))
 	if err != nil {
 		fmt.Printf("找不到记录,uuid:%v, msg:%v\n", ctx.Param("uuid"), err)
 		Error(ctx, err.Error())
@@ -95,4 +110,9 @@ func (r *ResourceApi) updateResourceAttribute(ctx *gin.Context) {
 	} else {
 		Success(ctx, "更新成功")
 	}
+}
+
+func (r *ResourceApi) getModelInfoForIns(ctx *gin.Context) {
+	result, err := r.resourceService.GetModelInfoForIns(ctx.Param("uid"))
+	ResultHandle(ctx, result, err)
 }

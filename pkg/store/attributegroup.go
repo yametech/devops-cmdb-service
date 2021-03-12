@@ -12,17 +12,34 @@ type AttributeGroup struct {
 	Name       string       `json:"name" gogm:"name=name"`
 	ModelUid   string       `json:"modelUid" gogm:"index;name=modelUid"`
 	Model      *Model       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
-	Attributes []*Attribute `json:"-" gogm:"direction=incoming;relationship=GroupBy"`
+	Attributes []*Attribute `json:"attributes" gogm:"direction=incoming;relationship=GroupBy"`
 	CommonObj
 }
 
 func (m *AttributeGroup) Get(session *gogm.Session, uuid string) error {
-
 	query := fmt.Sprintf("match (a:AttributeGroup) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
 		"uuid": uuid,
 	}
 	return session.Query(query, properties, m)
+}
+
+func (m *AttributeGroup) AddAttribute(target *Attribute) {
+	if target == nil {
+		return
+	}
+
+	if m.Attributes == nil {
+		m.Attributes = make([]*Attribute, 0)
+	}
+
+	for _, attribute := range m.Attributes {
+		if attribute.Uid == target.Uid {
+			return
+		}
+	}
+
+	m.Attributes = append(m.Attributes, target)
 }
 
 func (ag *AttributeGroup) LoadAll(session *gogm.Session, uuid string) error {
