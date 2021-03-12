@@ -104,6 +104,7 @@ func (m *Model) Get(session *gogm.Session, uuid string) error {
 	properties := map[string]interface{}{
 		"uuid": uuid,
 	}
+
 	return session.Query(query, properties, m)
 }
 

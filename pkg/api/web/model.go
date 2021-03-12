@@ -117,8 +117,13 @@ func (s *Server) getAllModel(ctx *gin.Context) {
 }
 
 func (s *Server) getModel(ctx *gin.Context) {
-	data := make(map[string]string)
-	if err := ctx.BindJSON(&data); err != nil {
+	rawData, err := ctx.GetRawData()
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	data := make(map[string]string, 0)
+	if err := json.Unmarshal(rawData, &data); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}

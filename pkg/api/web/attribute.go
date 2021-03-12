@@ -122,7 +122,17 @@ func (s *Server) getAllAttribute(ctx *gin.Context) {
 }
 
 func (s *Server) getAttribute(ctx *gin.Context) {
-	uuid := ctx.Param("uuid")
+	rawData, err := ctx.GetRawData()
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	unstructured := make(map[string]interface{})
+	if err := json.Unmarshal(rawData, &unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	uuid := fmt.Sprintf("%v", unstructured["uuid"])
 	attribute, err := s.AttributeService.GetAttributeInstance(uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
@@ -154,7 +164,7 @@ func (s *Server) createAttribute(ctx *gin.Context) {
 		return
 	}
 
-	api.RequestOK(ctx, s.Attribute)
+	api.RequestOK(ctx, attribute)
 }
 
 func (s *Server) putAttribute(ctx *gin.Context) {
@@ -163,7 +173,13 @@ func (s *Server) putAttribute(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	uuid := ctx.Param("uuid")
+	unstructured := make(map[string]interface{})
+	if err := json.Unmarshal(rawData, &unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	uuid := fmt.Sprintf("%v", unstructured["uuid"])
+
 	err = s.AttributeService.UpdateAttributeInstance(rawData, uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
@@ -174,7 +190,17 @@ func (s *Server) putAttribute(ctx *gin.Context) {
 }
 
 func (s *Server) deleteAttribute(ctx *gin.Context) {
-	uuid := ctx.Param("uuid")
+	rawData, err := ctx.GetRawData()
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	unstructured := make(map[string]interface{})
+	if err := json.Unmarshal(rawData, &unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	uuid := fmt.Sprintf("%v", unstructured["uuid"])
 	if err := s.AttributeService.DeleteAttributeInstance(uuid); err != nil {
 		api.RequestErr(ctx, err)
 		return
