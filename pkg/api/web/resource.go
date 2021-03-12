@@ -61,8 +61,21 @@ func (r *ResourceApi) getResourceListPage(ctx *gin.Context) {
 		Error(ctx, "参数有误")
 		return
 	}
+	modelUid := ctx.Query("modelUid")
+	queryValue := ctx.Query("queryValue")
+	if queryValue != "" {
+		Success(ctx, r.resourceService.GetResourceListPage(modelUid, queryValue, pageNumber, pageSize))
+	} else {
+		rawData, _ := ctx.GetRawData()
+		queryMap := &map[string]string{}
+		err = json.Unmarshal(rawData, queryMap)
+		if err != nil {
+			Error(ctx, "参数有误")
+			return
+		}
+		Success(ctx, r.resourceService.GetResourceListPageByMap(modelUid, pageNumber, pageSize, queryMap))
+	}
 
-	Success(ctx, r.resourceService.GetResourceListPage(ctx.Query("modelUid"), pageNumber, pageSize))
 }
 
 func (r *ResourceApi) getResourceDetail(ctx *gin.Context) {

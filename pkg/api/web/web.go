@@ -64,6 +64,10 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.DELETE("/model-relation/:uid", relationship.deleteModelRelation)
 	groupRoute.PUT("/model-relation/:uid", relationship.updateModelRelation)
 
+	groupRoute.GET("/resource-relation/:uuid", relationship.getResourceRelationList)
+	groupRoute.POST("/resource-relation", relationship.addResourceRelation)
+	groupRoute.DELETE("/resource-relation", relationship.deleteResourceRelation)
+
 	return server
 }
 
@@ -73,4 +77,12 @@ func Success(ctx *gin.Context, data interface{}) {
 
 func Error(ctx *gin.Context, msg string) {
 	ctx.JSON(200, &common.ApiResponseVO{Msg: msg, Code: 400})
+}
+
+func ResultHandle(ctx *gin.Context, result interface{}, err error) {
+	if err != nil {
+		Error(ctx, err.Error())
+	} else {
+		Success(ctx, result)
+	}
 }

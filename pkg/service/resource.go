@@ -9,6 +9,7 @@ import (
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -42,11 +43,18 @@ func (rs *ResourceService) GetAllModeList() interface{} {
 	return modelList
 }
 
-// 获取模型实例列表
-func (rs *ResourceService) GetResourceListPage(modelUid string, pageNumber int, pageSize int) interface{} {
+// 获取模型实例列表，
+// 支持2种查询方式：1.根据指定字段查询，2.不指定字段查询
+func (rs ResourceService) GetResourceListPageByMap(modelUid string, pageNumber int, pageSize int, queryMap *map[string]string) interface{} {
+	queryCommon := "MATCH (a:Resource)-[]-()-[]-(b:AttributeIns) "
+	where := "WHERE a.modelUid ='" + modelUid + "' AND "
+	for k, v := range *queryMap {
+		where += "b." + k + "='" + v + "' AND "
+	}
+	query := queryCommon + strings.TrimSuffix(strings.TrimSpace(where), "AND") + " "
+	fmt.Println(query)
 	srcList := &[]store.Resource{}
-	totalRaw, err := rs.ManualQueryRaw("MATCH (a:Resource {modelUid:$modelUid}) RETURN COUNT(a)",
-		map[string]interface{}{"modelUid": modelUid})
+	totalRaw, err := rs.ManualQueryRaw(query+"RETURN COUNT(a)", nil)
 	printOut(totalRaw[0][0])
 	total := totalRaw[0][0].(int64)
 	if err != nil {
@@ -56,17 +64,19 @@ func (rs *ResourceService) GetResourceListPage(modelUid string, pageNumber int, 
 		return common.PageResultVO{}
 	}
 
-	rs.ManualQuery("MATCH (a:Resource {modelUid:$modelUid}) RETURN a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit",
+	rs.ManualQuery(query+"RETURN a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit",
 		map[string]interface{}{"modelUid": modelUid, "skip": (pageNumber - 1) * pageSize, "limit": pageSize}, srcList)
 
 	printOut(srcList)
 
 	pageResultVO := &common.PageResultVO{TotalCount: total}
-	//list := make([]common.ResourcePageListVO, 0)
 	list := make([]interface{}, 0)
 	for _, srcResource := range *srcList {
 		resource := &store.Resource{}
-		store.GetSession(true).LoadDepth(resource, srcResource.UUID, 10)
+		err = store.GetSession(true).LoadDepth(resource, srcResource.UUID, 2)
+		if err != nil {
+			panic(err)
+		}
 		vo := &common.ResourceListPageVO{}
 		utils.SimpleConvert(vo, resource)
 		attributes := make(map[string]string)
@@ -80,6 +90,12 @@ func (rs *ResourceService) GetResourceListPage(modelUid string, pageNumber int, 
 	}
 	pageResultVO.List = list
 	return pageResultVO
+}
+
+// 不指定字段查询
+func (rs *ResourceService) GetResourceListPage(modelUid, queryValue string, pageNumber int, pageSize int) interface{} {
+	// TODO
+	return nil
 }
 
 func (rs *ResourceService) DeleteResource(uuid string) error {

@@ -66,6 +66,7 @@ type Model struct {
 	//Uuid             string            `json:"Uuid" gogm:"unique;name=uuid"`
 	Name            string            `json:"name" gogm:"name=name"`
 	IconUrl         string            `json:"iconUrl" gogm:"name=iconUrl"`
+	Model           *Model            `json:"-" gogm:"direction=both;relationship=Relation"`
 	ModelGroup      *ModelGroup       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
 	AttributeGroups []*AttributeGroup `json:"attributeGroups" gogm:"direction=incoming;relationship=GroupBy"`
 	Resources       []*Resource       `json:"resources" gogm:"direction=incoming;relationship=Instance"`

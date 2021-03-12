@@ -134,14 +134,13 @@ func (ms RelationshipService) GetResourceRelationList(uuid string) (interface{},
 
 	voList := &[]common.ResourceRelationListPageVO{}
 	for _, row := range result {
-		addResourceRelationList(voList, row)
+		addResourceRelationList(voList, row, uuid)
 	}
 
 	return voList, err
 }
 
-// TODO 解决方向的问题
-func addResourceRelationList(result *[]common.ResourceRelationListPageVO, row []interface{}) {
+func addResourceRelationList(result *[]common.ResourceRelationListPageVO, row []interface{}, uuid string) {
 	if row == nil {
 		return
 	}
@@ -149,7 +148,7 @@ func addResourceRelationList(result *[]common.ResourceRelationListPageVO, row []
 		r := make([]common.ResourceRelationListPageVO, 0)
 		result = &r
 	}
-	pageVO := convert2ResourceRelationListPageVO(row)
+	pageVO := convert2ResourceRelationListPageVO(row, uuid)
 
 	newRelation := false
 	for _, vo := range *result {
@@ -164,14 +163,14 @@ func addResourceRelationList(result *[]common.ResourceRelationListPageVO, row []
 		// 资源字段
 		resourceService := &ResourceService{}
 		modelAttributes := &[]common.ModelAttributeVisibleVO{}
-		utils.SimpleConvert(modelAttributes, resourceService.GetModelAttributeList(pageVO.TargetUid))
+		utils.SimpleConvert(modelAttributes, resourceService.GetModelAttributeList((*pageVO.Resources)[0]["modelUid"]))
 		pageVO.ModelAttributes = modelAttributes
 
 		*result = append(*result, *pageVO)
 	}
 }
 
-func convert2ResourceRelationListPageVO(row []interface{}) *common.ResourceRelationListPageVO {
+func convert2ResourceRelationListPageVO(row []interface{}, uuid string) *common.ResourceRelationListPageVO {
 	a := row[0].(*gogm.NodeWrap)
 	r := row[1].(*gogm.RelationshipWrap)
 	b := row[2].(*gogm.NodeWrap)
@@ -193,13 +192,26 @@ func convert2ResourceRelationListPageVO(row []interface{}) *common.ResourceRelat
 	vo.TargetName = endSource.ModelName
 	vo.RelationshipUid = r.Props["uid"].(string)
 
-	// 资源实例
+	// 关联资源实例
 	resource := map[string]string{}
-	resource["uuid"] = endSource.UUID
+	if startSource.UUID == uuid {
+		resource["uuid"] = endSource.UUID
+		resource["modelUid"] = endSource.ModelUid
+	} else {
+		resource["uuid"] = startSource.UUID
+		resource["modelUid"] = startSource.ModelUid
+	}
 	resources := make([]map[string]string, 0)
 	resources = append(resources, resource)
 	vo.Resources = &resources
-	//TODO 补充资源实例， 自身在2个方向的数据
+	//补充资源实例
+	resourceService := ResourceService{}
+	res, _ := resourceService.GetResourceDetail(resource["uuid"])
+	for _, g := range res.(*store.Resource).AttributeGroupIns {
+		for _, attribute := range g.AttributeIns {
+			resource[attribute.Uid] = attribute.AttributeInsValue
+		}
+	}
 
 	return vo
 }

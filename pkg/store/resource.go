@@ -9,6 +9,7 @@ type Resource struct {
 	ModelUid          string               `json:"modelUid" gogm:"name=modelUid"`
 	ModelName         string               `json:"modelName" gogm:"name=modelName"`
 	Models            *Model               `json:"-" gogm:"direction=outgoing;relationship=Instance"`
+	Resource          *Resource            `json:"-" gogm:"direction=both;relationship=Relation"`
 	AttributeGroupIns []*AttributeGroupIns `json:"attributeGroupIns" gogm:"direction=incoming;relationship=GroupBy"`
 	CommonObj
 }
