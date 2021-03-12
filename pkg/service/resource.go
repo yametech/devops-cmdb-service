@@ -18,12 +18,41 @@ type ResourceService struct {
 	store.Neo4jDomain
 }
 
+// 创建实例时候获取模型基础信息
+func (rs ResourceService) GetModelInfoForIns(uid string) (interface{}, error) {
+	m := &store.Model{}
+	err := rs.Neo4jDomain.Get(m, "uid", uid)
+	if err != nil {
+		return nil, err
+	}
+
+	query := "MATCH (a:Model)-[]-(b:AttributeGroup)-[]-(c:Attribute) WHERE a.uid =$uid RETURN a,b,c"
+	result, err := rs.ManualQueryRaw(query, map[string]interface{}{"uid": uid})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range result {
+		// 属性
+		o := row[2].(*gogm.NodeWrap)
+		attribute := &store.Attribute{}
+		utils.SimpleConvert(attribute, &o.Props)
+
+		// 属性分组
+		o = row[1].(*gogm.NodeWrap)
+		attributeGroup := &store.AttributeGroup{}
+		utils.SimpleConvert(attributeGroup, &o.Props)
+
+		attributeGroup.AddAttribute(attribute)
+		m.AddAttributeGroup(attributeGroup)
+	}
+	return m, nil
+}
+
 // 模型属性字段列表
 func (rs *ResourceService) GetModelAttributeList(modelUid string) interface{} {
 	a := &[]store.Attribute{}
 	rs.Neo4jDomain.Get(a, "modelUid", modelUid)
-	//rs.ManualQuery("MATCH (a:Attribute {modelUid:$modelUid}) RETURN a", map[string]interface{}{"modelUid": modelUid}, a)
-	//fmt.Printf("%#v", a)
 	return a
 }
 
@@ -98,16 +127,22 @@ func (rs *ResourceService) GetResourceListPage(modelUid, queryValue string, page
 	return nil
 }
 
-func (rs *ResourceService) DeleteResource(uuid string) error {
-	r := &store.Resource{}
-	err := rs.Neo4jDomain.Get(r, "uuid", uuid)
-	if err != nil {
-		return err
+func (rs *ResourceService) DeleteResource(uuidArray []string) error {
+	for _, uuid := range uuidArray {
+		r := &store.Resource{}
+		err := rs.Neo4jDomain.Get(r, "uuid", uuid)
+		if err != nil {
+			return err
+		}
+
+		query := "match (a:Resource)-[]-(b:AttributeGroupIns)-[]-(c:AttributeIns) where a.uuid = $uuid detach delete a,b,c"
+		_, err = rs.ManualExecute(query, map[string]interface{}{"uuid": uuid})
+		if err != nil {
+			return err
+		}
 	}
 
-	query := "match (a:Resource)-[]-(b:AttributeGroupIns)-[]-(c:AttributeIns) where a.uuid = $uuid detach delete a,b,c"
-	_, err = rs.ManualExecute(query, map[string]interface{}{"uuid": uuid})
-	return err
+	return nil
 }
 
 func (rs *ResourceService) AddResource(body string, operator string) (interface{}, error) {

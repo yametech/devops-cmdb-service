@@ -52,15 +52,17 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.GET("/model-menu", resource.getModelMenu)
 	groupRoute.GET("/model-attribute/:uid", resource.getModelAttribute)
 	groupRoute.PUT("/model-attribute/:uid", resource.configModelAttribute)
+	groupRoute.GET("/model-info/:uid", resource.getModelInfoForIns)
 	groupRoute.GET("/resource", resource.getResourceListPage)
 	groupRoute.GET("/resource/:uuid", resource.getResourceDetail)
 	groupRoute.POST("/resource", resource.addResource)
-	groupRoute.DELETE("/resource/:uuid", resource.deleteResource)
+	groupRoute.DELETE("/resource/:uuids", resource.deleteResource)
 	groupRoute.PUT("/resource-attribute/:uuid", resource.updateResourceAttribute)
 
 	// relationship
 	relationship := &RelationshipApi{&service.RelationshipService{}}
 	groupRoute.GET("/model-relation/:uid", relationship.getModelRelationList)
+	groupRoute.GET("/model-relation/:uid/usage", relationship.getModelRelationUsageCount)
 	groupRoute.POST("/model-relation", relationship.addModelRelation)
 	groupRoute.DELETE("/model-relation/:uid", relationship.deleteModelRelation)
 	groupRoute.PUT("/model-relation/:uid", relationship.updateModelRelation)

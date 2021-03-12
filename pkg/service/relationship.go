@@ -33,7 +33,7 @@ func (ms *RelationshipService) GetModelRelationList(uid string) interface{} {
 }
 
 func (ms RelationshipService) DeleteModelRelation(uid string) ([][]interface{}, error) {
-	result, _ := ms.GetResourceRelationByModelRelationUid(uid)
+	result, _ := ms.GetResourceRelationsByModelRelationUid(uid)
 	if result != nil {
 		return nil, errors.New("该模型已被使用，禁止删除")
 	}
@@ -55,7 +55,7 @@ func (ms *RelationshipService) UpdateModelRelation(body string, operator string)
 
 	modelRelation := result[0][0].(*store.ModelRelation)
 
-	result, _ = ms.GetResourceRelationByModelRelationUid(src.Uid)
+	result, _ = ms.GetResourceRelationsByModelRelationUid(src.Uid)
 	//如果已有数据关联此模型，则只能更新描述备注
 	if result == nil {
 		// 全部更新
@@ -98,8 +98,8 @@ func parseToModelRelation(body string, operator string) (*store.ModelRelation, e
 	return relation, nil
 }
 
-func (ms *RelationshipService) GetResourceRelationByModelRelationUid(modelRelationUid string) ([][]interface{}, error) {
-	query := "match (a:Resource)-[r:Relation]-(b:Resource) where r.modelRelationUid = $uid return distinct  r"
+func (ms *RelationshipService) GetResourceRelationsByModelRelationUid(modelRelationUid string) ([][]interface{}, error) {
+	query := "match (a:Resource)-[r:Relation]-(b:Resource) where r.uid = $uid return distinct  r"
 	return ms.ManualQueryRaw(query, map[string]interface{}{"uid": modelRelationUid})
 }
 

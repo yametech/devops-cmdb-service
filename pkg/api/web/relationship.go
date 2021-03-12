@@ -32,6 +32,11 @@ func (r *RelationshipApi) updateModelRelation(ctx *gin.Context) {
 	ResultHandle(ctx, result, err)
 }
 
+func (r *RelationshipApi) getModelRelationUsageCount(ctx *gin.Context) {
+	result, err := r.relationshipService.GetResourceRelationsByModelRelationUid(ctx.Param("uid"))
+	ResultHandle(ctx, len(result), err)
+}
+
 func (r *RelationshipApi) getResourceRelationList(ctx *gin.Context) {
 	result, err := r.relationshipService.GetResourceRelationList(ctx.Param("uuid"))
 	ResultHandle(ctx, result, err)
