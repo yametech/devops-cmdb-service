@@ -5,15 +5,19 @@ import (
 	"github.com/mindstand/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"strconv"
+	"sync"
 )
 
 type ModelService struct {
 	Model      store.Model
 	ModelGroup store.ModelGroup
 	Session    *gogm.Session
+	mutex      sync.Mutex
 }
 
 func (as *ModelService) CheckExists(modelType, uuid string) bool {
+	as.mutex.Lock()
+	defer as.mutex.Unlock()
 	switch modelType {
 	case "model":
 		model := store.Model{}
@@ -34,6 +38,8 @@ func (as *ModelService) CheckExists(modelType, uuid string) bool {
 }
 
 func (as *ModelService) ChangeModelGroup(model *store.Model, uuid string) error {
+	as.mutex.Lock()
+	defer as.mutex.Unlock()
 	modelGroup := store.ModelGroup{}
 	if err := modelGroup.Get(as.Session, uuid); err != nil {
 		return err
@@ -51,6 +57,8 @@ func (as *ModelService) ChangeModelGroup(model *store.Model, uuid string) error 
 }
 
 func (as *ModelService) CleanModelGroup(uuid string) error {
+	as.mutex.Lock()
+	defer as.mutex.Unlock()
 	if err := as.ModelGroup.Get(as.Session, uuid); err != nil {
 		return err
 	}
@@ -62,6 +70,8 @@ func (as *ModelService) CleanModelGroup(uuid string) error {
 }
 
 func (as *ModelService) GetGroupList(limit, pageNumber string) (*[]store.ModelGroup, error) {
+	as.mutex.Lock()
+	defer as.mutex.Unlock()
 	limitInt, err := strconv.Atoi(limit)
 	if err != nil || limitInt < 0 {
 		return nil, err
@@ -91,6 +101,8 @@ func (as *ModelService) GetGroupList(limit, pageNumber string) (*[]store.ModelGr
 }
 
 func (as *ModelService) GetModelList(limit string, pageNumber string) (*[]store.Model, error) {
+	as.mutex.Lock()
+	defer as.mutex.Unlock()
 	limitInt, err := strconv.Atoi(limit)
 	if err != nil || limitInt < 0 {
 		return nil, err
@@ -112,6 +124,8 @@ func (as *ModelService) GetModelList(limit string, pageNumber string) (*[]store.
 }
 
 func (as *ModelService) GetModelGroupInstance(uuid string) (*store.ModelGroup, error) {
+	as.mutex.Lock()
+	defer as.mutex.Unlock()
 	modelGroup := &store.ModelGroup{}
 	if err := modelGroup.Get(as.Session, uuid); err != nil {
 		return nil, err
@@ -125,6 +139,8 @@ func (as *ModelService) GetModelGroupInstance(uuid string) (*store.ModelGroup, e
 }
 
 func (as *ModelService) GetModelInstance(uuid string) (*store.Model, error) {
+	as.mutex.Lock()
+	defer as.mutex.Unlock()
 	model := &store.Model{}
 	if err := model.Get(as.Session, uuid); err != nil {
 		return nil, err
