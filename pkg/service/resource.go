@@ -83,7 +83,7 @@ func (rs ResourceService) GetResourceListPageByMap(modelUid string, pageNumber i
 	query := queryCommon + strings.TrimSuffix(strings.TrimSpace(where), "AND") + " "
 	fmt.Println(query)
 	srcList := &[]store.Resource{}
-	totalRaw, err := rs.ManualQueryRaw(query+"RETURN COUNT(a)", nil)
+	totalRaw, err := rs.ManualQueryRaw(query+"RETURN COUNT(distinct a)", nil)
 	printOut(totalRaw[0][0])
 	total := totalRaw[0][0].(int64)
 	if err != nil {

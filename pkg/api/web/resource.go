@@ -62,8 +62,8 @@ func (r *ResourceApi) addResource(ctx *gin.Context) {
 
 // 获取模型实例列表
 func (r *ResourceApi) getResourceListPage(ctx *gin.Context) {
-	pageSizeStr := ctx.DefaultQuery("page_size", "10")
-	pageNumberStr := ctx.DefaultQuery("page_number", "1")
+	pageSizeStr := ctx.DefaultQuery("pageSize", "10")
+	pageNumberStr := ctx.DefaultQuery("current", "1")
 	pageSize, err := strconv.Atoi(pageSizeStr)
 	if err != nil || pageSize <= 0 {
 		Error(ctx, "参数有误")
@@ -81,11 +81,14 @@ func (r *ResourceApi) getResourceListPage(ctx *gin.Context) {
 	} else {
 		rawData, _ := ctx.GetRawData()
 		queryMap := &map[string]string{}
-		err = json.Unmarshal(rawData, queryMap)
-		if err != nil {
-			Error(ctx, "参数有误")
-			return
+		if len(rawData) > 0 {
+			err = json.Unmarshal(rawData, queryMap)
+			if err != nil {
+				Error(ctx, "参数有误")
+				return
+			}
 		}
+
 		Success(ctx, r.resourceService.GetResourceListPageByMap(modelUid, pageNumber, pageSize, queryMap))
 	}
 
