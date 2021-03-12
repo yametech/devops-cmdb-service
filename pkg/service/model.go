@@ -145,5 +145,8 @@ func (as *ModelService) GetModelInstance(uuid string) (*store.Model, error) {
 	if err := model.Get(as.Session, uuid); err != nil {
 		return nil, err
 	}
+	attributeGroup := &store.AttributeGroup{}
+	_ = attributeGroup
+
 	return model, nil
 }

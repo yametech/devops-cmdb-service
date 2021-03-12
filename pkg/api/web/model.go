@@ -21,8 +21,13 @@ func (s *Server) getAllGroup(ctx *gin.Context) {
 }
 
 func (s *Server) getGroup(ctx *gin.Context) {
-	uuid := ctx.DefaultQuery("uuid", "")
-	modelGroup, err := s.ModelService.GetModelGroupInstance(uuid)
+	unstructured := make(map[string]string)
+	if err := ctx.BindJSON(&unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+
+	modelGroup, err := s.ModelService.GetModelGroupInstance(unstructured["uuid"])
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -55,7 +60,13 @@ func (s *Server) putGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	uuid := ctx.DefaultQuery("uuid", "")
+	unstructured := make(map[string]interface{})
+	if err := json.Unmarshal(rawData, &unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	uuid := fmt.Sprintf("%v", unstructured["uuid"])
+
 	if exists := s.ModelService.CheckExists("modelGroup", uuid); exists != true {
 		api.RequestErr(ctx, fmt.Errorf("group not exists"))
 		return
@@ -75,8 +86,12 @@ func (s *Server) putGroup(ctx *gin.Context) {
 }
 
 func (s *Server) deleteGroup(ctx *gin.Context) {
-	uuid := ctx.DefaultQuery("uuid", "")
-	modelGroup, err := s.ModelService.GetModelGroupInstance(uuid)
+	unstructured := make(map[string]string)
+	if err := ctx.BindJSON(&unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	modelGroup, err := s.ModelService.GetModelGroupInstance(unstructured["uuid"])
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -102,8 +117,13 @@ func (s *Server) getAllModel(ctx *gin.Context) {
 }
 
 func (s *Server) getModel(ctx *gin.Context) {
-	uuid := ctx.DefaultQuery("uuid", "")
-	model, err := s.ModelService.GetModelInstance(uuid)
+	data := make(map[string]string)
+	if err := ctx.BindJSON(&data); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+
+	model, err := s.ModelService.GetModelInstance(data["uuid"])
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -117,8 +137,8 @@ func (s *Server) createModel(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	unstructured := make(map[string]interface{})
-	if err := json.Unmarshal(rawData, &unstructured); err != nil {
+	unstructured := make(map[string]string)
+	if err := ctx.BindJSON(&unstructured); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
@@ -146,9 +166,14 @@ func (s *Server) putModel(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	uuid := ctx.DefaultQuery("uuid", "")
+	unstructured := make(map[string]string)
+	if err := ctx.BindJSON(&unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+
 	originModel := &store.Model{}
-	if !s.ModelService.CheckExists("model", uuid) {
+	if !s.ModelService.CheckExists("model", unstructured["uuid"]) {
 		api.RequestErr(ctx, fmt.Errorf("get origin model error"))
 		return
 	}
@@ -159,11 +184,7 @@ func (s *Server) putModel(ctx *gin.Context) {
 		return
 	}
 	model.UUID = originModel.UUID
-	unstructured := make(map[string]interface{})
-	if err := json.Unmarshal(rawData, &unstructured); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
+
 	modelGroupUuid := fmt.Sprintf("%v", unstructured["modelgroup"])
 	if exists := s.ModelService.CheckExists("modelGroup", modelGroupUuid); exists != true {
 		api.RequestErr(ctx, fmt.Errorf("modelgroup not exists"))
@@ -178,8 +199,13 @@ func (s *Server) putModel(ctx *gin.Context) {
 }
 
 func (s *Server) deleteModel(ctx *gin.Context) {
-	uuid := ctx.DefaultQuery("uuid", "")
-	model, err := s.ModelService.GetModelInstance(uuid)
+	unstructured := make(map[string]string)
+	if err := ctx.BindJSON(&unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+
+	model, err := s.ModelService.GetModelInstance(unstructured["uuid"])
 	if err != nil {
 		api.RequestErr(ctx, fmt.Errorf("get model fail"))
 		return

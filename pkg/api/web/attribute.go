@@ -21,13 +21,23 @@ func (s *Server) getAllAttributeGroup(ctx *gin.Context) {
 }
 
 func (s *Server) getAttributeGroup(ctx *gin.Context) {
-	uuid := ctx.Param("uuid")
-	err := s.AttributeGroup.Get(uuid)
+	rawData, err := ctx.GetRawData()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.AttributeGroup)
+	unstructured := make(map[string]interface{})
+	if err := json.Unmarshal(rawData, &unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	uuid := fmt.Sprintf("%v", unstructured["uuid"])
+	attributeGroup, err := s.AttributeService.GetAttributeGroupInstance(uuid)
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	api.RequestOK(ctx, attributeGroup)
 }
 
 func (s *Server) createAttributeGroup(ctx *gin.Context) {
@@ -42,23 +52,19 @@ func (s *Server) createAttributeGroup(ctx *gin.Context) {
 		return
 	}
 	modelUUID := fmt.Sprintf("%v", unstructured["modeluuid"])
-	if err := s.Model.Get(s.ModelService.Session, modelUUID); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
 
-	if err := json.Unmarshal(rawData, &s.AttributeGroup); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	s.AttributeGroup.Model = &s.Model
-	s.AttributeGroup.ModelUid = s.Model.Uid
-	err = s.AttributeGroup.Save()
+	model, err := s.ModelService.GetModelInstance(modelUUID)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.AttributeGroup)
+	attributeGroup, err := s.AttributeService.CreateAttributeGroup(rawData, model)
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+
+	api.RequestOK(ctx, attributeGroup)
 }
 
 func (s *Server) putAttributeGroup(ctx *gin.Context) {
@@ -67,33 +73,35 @@ func (s *Server) putAttributeGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	uuid := ctx.Param("uuid")
-	originAG := &store.AttributeGroup{}
-	err = originAG.Get(uuid)
-	if err != nil {
-		api.RequestErr(ctx, fmt.Errorf("get origin attributegroup error"))
-		return
-	}
-	if err := json.Unmarshal(rawData, &s.AttributeGroup); err != nil {
+	unstructured := make(map[string]interface{})
+	if err := json.Unmarshal(rawData, &unstructured); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	s.AttributeGroup.UUID = uuid
-	err = s.AttributeGroup.Update()
+	uuid := fmt.Sprintf("%v", unstructured["uuid"])
+
+	attributeGroup, err := s.AttributeService.UpdateAttributeGroupInstance(rawData, uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.AttributeGroup)
+
+	api.RequestOK(ctx, attributeGroup)
 }
 
 func (s *Server) deleteAttributeGroup(ctx *gin.Context) {
-	uuid := ctx.Param("uuid")
-	if err := s.AttributeGroup.Get(uuid); err != nil {
+	rawData, err := ctx.GetRawData()
+	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	err := s.AttributeGroup.Delete()
+	unstructured := make(map[string]interface{})
+	if err := json.Unmarshal(rawData, &unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	uuid := fmt.Sprintf("%v", unstructured["uuid"])
+	err = s.AttributeService.DeleteAttributeGroupInstance(uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -115,12 +123,12 @@ func (s *Server) getAllAttribute(ctx *gin.Context) {
 
 func (s *Server) getAttribute(ctx *gin.Context) {
 	uuid := ctx.Param("uuid")
-	err := s.Attribute.Get(uuid)
+	attribute, err := s.AttributeService.GetAttributeInstance(uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.Attribute)
+	api.RequestOK(ctx, attribute)
 }
 
 func (s *Server) createAttribute(ctx *gin.Context) {
@@ -135,17 +143,12 @@ func (s *Server) createAttribute(ctx *gin.Context) {
 		return
 	}
 	attributeGroupUuid := fmt.Sprintf("%v", unstructured["attributegroupuuid"])
-
-	if err := s.AttributeGroup.Get(attributeGroupUuid); err != nil {
+	attribute := &store.Attribute{}
+	if err := json.Unmarshal(rawData, attribute); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	if err := json.Unmarshal(rawData, &s.Attribute); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	s.Attribute.AttributeGroup = &s.AttributeGroup
-	err = s.Attribute.Save()
+	err = s.AttributeService.ChangeModelGroup(attribute, attributeGroupUuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -161,34 +164,18 @@ func (s *Server) putAttribute(ctx *gin.Context) {
 		return
 	}
 	uuid := ctx.Param("uuid")
-	originAttribute := &store.Attribute{}
-	err = originAttribute.Get(uuid)
-	if err != nil {
-		api.RequestErr(ctx, fmt.Errorf("get origin attribute error"))
-		return
-	}
-	if err := json.Unmarshal(rawData, &s.Attribute); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	s.Attribute.UUID = uuid
-	err = s.Attribute.Save()
+	err = s.AttributeService.UpdateAttributeInstance(rawData, uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
+
 	api.RequestOK(ctx, s.Attribute)
 }
 
 func (s *Server) deleteAttribute(ctx *gin.Context) {
 	uuid := ctx.Param("uuid")
-	err := s.Attribute.Get(uuid)
-	if err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	err = s.Attribute.Delete()
-	if err != nil {
+	if err := s.AttributeService.DeleteAttributeInstance(uuid); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}

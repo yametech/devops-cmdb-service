@@ -35,11 +35,11 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.POST("/model/model-update", server.putModel)
 	groupRoute.POST("/model/model-delete", server.deleteModel)
 
-	groupRoute.GET("/attribute-group", server.getAllAttributeGroup)
-	groupRoute.GET("/attribute-group/:uuid", server.getAttributeGroup)
-	groupRoute.POST("/attribute-group", server.createAttributeGroup)
-	groupRoute.PUT("/attribute-group/:uuid", server.putAttributeGroup)
-	groupRoute.DELETE("/attribute-group/:uuid", server.deleteAttributeGroup)
+	groupRoute.POST("/model/attribute-group-list", server.getAllAttributeGroup)
+	groupRoute.POST("/model/attribute-group-detail", server.getAttributeGroup)
+	groupRoute.POST("/model/attribute-group-add", server.createAttributeGroup)
+	groupRoute.POST("/model/attribute-group-update", server.putAttributeGroup)
+	groupRoute.POST("/model/attribute-group-delete", server.deleteAttributeGroup)
 
 	groupRoute.GET("/attribute", server.getAllAttribute)
 	groupRoute.GET("/attribute/:uuid", server.getAttribute)

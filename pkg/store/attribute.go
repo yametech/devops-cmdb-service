@@ -3,6 +3,7 @@ package store
 import (
 	"fmt"
 	"github.com/mindstand/gogm"
+	"time"
 )
 
 type AttributeCommon struct {
@@ -48,33 +49,41 @@ type Attribute struct {
 	CommonObj
 }
 
-func (a *Attribute) LoadAll(aList *[]*Attribute, groupId string) error {
+func (a *Attribute) LoadAll(session *gogm.Session, groupId string) (*[]*Attribute, error) {
+	aList := make([]*Attribute, 0)
 	query := fmt.Sprintf("match (a:Attribute)-[r:GroupBy]->(b:AttributeGroup)where b.uid=$uid return a")
 	properties := map[string]interface{}{
 		"uid": groupId,
 	}
-	err := GetSession(true).Query(query, properties, aList)
+	err := session.Query(query, properties, &aList)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &aList, nil
 }
 
-func (m *Attribute) Get(uuid string) error {
+func (a *Attribute) Get(session *gogm.Session, uuid string) error {
 	query := fmt.Sprintf("match (a:Attribute) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
 		"uuid": uuid,
 	}
-	return GetSession(false).Query(query, properties, m)
+	return session.Query(query, properties, a)
 }
 
-func (m *Attribute) Delete() error {
-	return GetSession(false).Delete(m)
+func (a *Attribute) Delete(session *gogm.Session) error {
+	return session.Delete(a)
 }
 
-func (obj *Attribute) Save() error {
+func (obj *Attribute) Save(session *gogm.Session) error {
 	//obj.Visible = true
-	return GetSession(false).Save(obj)
+	obj.CreateTime = time.Now().Unix()
+	obj.UpdateTime = time.Now().Unix()
+	return session.Save(obj)
+}
+
+func (a *Attribute) Update(session *gogm.Session) error {
+	a.UpdateTime = time.Now().Unix()
+	return session.Save(a)
 }
 
 func (obj *Attribute) List(field string, value interface{}) interface{} {
