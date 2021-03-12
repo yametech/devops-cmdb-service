@@ -11,7 +11,6 @@ import (
 func (s *Server) getAllGroup(ctx *gin.Context) {
 	limit := ctx.DefaultQuery("page_size", "10")
 	pageNumber := ctx.DefaultQuery("page_number", "1")
-
 	allMG, err := s.ModelService.GetGroupList(limit, pageNumber)
 	if err != nil {
 		api.RequestErr(ctx, err)
@@ -22,12 +21,12 @@ func (s *Server) getAllGroup(ctx *gin.Context) {
 
 func (s *Server) getGroup(ctx *gin.Context) {
 	uuid := ctx.Param("uuid")
-	err := s.ModelGroup.Get(uuid)
+	modelGroup, err := s.ModelService.GetModelGroupInstance(uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.ModelGroup)
+	api.RequestOK(ctx, modelGroup)
 }
 
 func (s *Server) createGroup(ctx *gin.Context) {
@@ -36,16 +35,17 @@ func (s *Server) createGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	if err := json.Unmarshal(rawData, &s.ModelGroup); err != nil {
+	modelGroup := store.ModelGroup{}
+	if err := json.Unmarshal(rawData, &modelGroup); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	err = s.ModelGroup.Save()
+	err = modelGroup.Save()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.ModelGroup)
+	api.RequestOK(ctx, modelGroup)
 }
 
 func (s *Server) putGroup(ctx *gin.Context) {
@@ -59,22 +59,28 @@ func (s *Server) putGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, fmt.Errorf("group not exists"))
 		return
 	}
-	if err := json.Unmarshal(rawData, &s.ModelGroup); err != nil {
+	modelGroup := store.ModelGroup{}
+	if err := json.Unmarshal(rawData, &modelGroup); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	s.ModelGroup.UUID = uuid
-	err = s.ModelGroup.Update()
+	modelGroup.UUID = uuid
+	err = modelGroup.Update()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.ModelGroup)
+	api.RequestOK(ctx, modelGroup)
 }
 
 func (s *Server) deleteGroup(ctx *gin.Context) {
 	uuid := ctx.Param("uuid")
-	err := s.ModelGroup.Delete(uuid)
+	modelGroup, err := s.ModelService.GetModelGroupInstance(uuid)
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	err = modelGroup.Delete()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -171,7 +177,11 @@ func (s *Server) putModel(ctx *gin.Context) {
 
 func (s *Server) deleteModel(ctx *gin.Context) {
 	uuid := ctx.Param("uuid")
-	err := s.Model.Delete(uuid)
+	if err := s.Model.Get(uuid); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	err := s.Model.Delete()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return

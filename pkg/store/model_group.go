@@ -33,17 +33,6 @@ func (mg *ModelGroup) Get(uuid string) error {
 	return GetSession(false).Query(query, properties, mg)
 }
 
-func (mg *ModelGroup) Delete(uuid string) error {
-	query := fmt.Sprintf("match (a:ModelGroup) where a.uuid = $uuid return a")
-	properties := map[string]interface{}{
-		"uuid": uuid,
-	}
-	session := GetSession(false)
-	if err := session.Query(query, properties, mg); err != nil {
-		return err
-	}
-	if err := session.Delete(mg); err != nil {
-		return err
-	}
-	return nil
+func (mg *ModelGroup) Delete() error {
+	return GetSession(false).Delete(mg)
 }

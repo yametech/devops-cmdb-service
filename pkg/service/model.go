@@ -71,19 +71,17 @@ func (as *ModelService) GetGroupList(limit, pageNumber string) (*[]store.ModelGr
 		"skip":  (pageNumberInt - 1) * limitInt,
 		"limit": limitInt,
 	}
-
 	err = store.GetSession(true).Query(query, properties, &allMG)
 	if err != nil {
 		return nil, err
 	}
 	for i, v := range allMG {
-		models := make([]*store.Model, 0)
-		if err := as.Model.LoadAll(&models, v.UUID); err != nil {
+		models, err := as.Model.LoadAll(v.UUID)
+		if err != nil {
 			return nil, err
 		}
 		allMG[i].Models = models
 	}
-
 	return &allMG, nil
 }
 
@@ -106,4 +104,25 @@ func (as *ModelService) GetModelList(limit string, pageNumber string) (*[]store.
 		return nil, err
 	}
 	return &allModel, nil
+}
+
+func (as *ModelService) GetModelGroupInstance(uuid string) (*store.ModelGroup, error) {
+	modelGroup := &store.ModelGroup{}
+	if err := modelGroup.Get(uuid); err != nil {
+		return nil, err
+	}
+	models, err := as.Model.LoadAll(modelGroup.UUID)
+	if err != nil {
+		return nil, err
+	}
+	modelGroup.Models = models
+	return modelGroup, nil
+}
+
+func (as *ModelService) GetModelInstance(uuid string) (*store.Model, error) {
+	model := &store.Model{}
+	if err := model.Get(uuid); err != nil {
+		return nil, err
+	}
+	return model, nil
 }
