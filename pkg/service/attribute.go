@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/mindstand/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"strconv"
 )
@@ -9,6 +10,7 @@ import (
 type AttributeService struct {
 	AttributeGroup store.AttributeGroup
 	Attribute      store.Attribute
+	Session        *gogm.Session
 }
 
 func (as *AttributeService) CheckExists(modelType, uuid string) bool {

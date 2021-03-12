@@ -6,12 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
+	"net/http"
 )
 
 func (s *Server) getAllGroup(ctx *gin.Context) {
 	limit := ctx.DefaultQuery("page_size", "10")
 	pageNumber := ctx.DefaultQuery("page_number", "1")
-
 	allMG, err := s.ModelService.GetGroupList(limit, pageNumber)
 	if err != nil {
 		api.RequestErr(ctx, err)
@@ -21,13 +21,13 @@ func (s *Server) getAllGroup(ctx *gin.Context) {
 }
 
 func (s *Server) getGroup(ctx *gin.Context) {
-	uuid := ctx.Param("uuid")
-	err := s.ModelGroup.Get(uuid)
+	uuid := ctx.DefaultQuery("uuid", "")
+	modelGroup, err := s.ModelService.GetModelGroupInstance(uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.ModelGroup)
+	api.RequestOK(ctx, modelGroup)
 }
 
 func (s *Server) createGroup(ctx *gin.Context) {
@@ -36,16 +36,17 @@ func (s *Server) createGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	if err := json.Unmarshal(rawData, &s.ModelGroup); err != nil {
+	modelGroup := store.ModelGroup{}
+	if err := json.Unmarshal(rawData, &modelGroup); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	err = s.ModelGroup.Save()
+	err = modelGroup.Save(s.ModelService.Session)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.ModelGroup)
+	api.RequestOK(ctx, modelGroup)
 }
 
 func (s *Server) putGroup(ctx *gin.Context) {
@@ -54,27 +55,33 @@ func (s *Server) putGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	uuid := ctx.Param("uuid")
+	uuid := ctx.DefaultQuery("uuid", "")
 	if exists := s.ModelService.CheckExists("modelGroup", uuid); exists != true {
 		api.RequestErr(ctx, fmt.Errorf("group not exists"))
 		return
 	}
-	if err := json.Unmarshal(rawData, &s.ModelGroup); err != nil {
+	modelGroup := store.ModelGroup{}
+	if err := json.Unmarshal(rawData, &modelGroup); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	s.ModelGroup.UUID = uuid
-	err = s.ModelGroup.Update()
+	modelGroup.UUID = uuid
+	err = modelGroup.Update(s.ModelService.Session)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.ModelGroup)
+	api.RequestOK(ctx, modelGroup)
 }
 
 func (s *Server) deleteGroup(ctx *gin.Context) {
-	uuid := ctx.Param("uuid")
-	err := s.ModelGroup.Delete(uuid)
+	uuid := ctx.DefaultQuery("uuid", "")
+	modelGroup, err := s.ModelService.GetModelGroupInstance(uuid)
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	err = modelGroup.Delete(s.ModelService.Session)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -95,13 +102,13 @@ func (s *Server) getAllModel(ctx *gin.Context) {
 }
 
 func (s *Server) getModel(ctx *gin.Context) {
-	uuid := ctx.Param("uuid")
-	err := s.Model.Get(uuid)
+	uuid := ctx.DefaultQuery("uuid", "")
+	model, err := s.ModelService.GetModelInstance(uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.Model)
+	api.RequestOK(ctx, model)
 }
 
 func (s *Server) createModel(ctx *gin.Context) {
@@ -115,22 +122,22 @@ func (s *Server) createModel(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-
+	model := store.Model{}
 	modelGroupUuid := fmt.Sprintf("%v", unstructured["modelgroup"])
-	if exists := s.ModelService.CheckExists("modelGroup", modelGroupUuid); exists != true {
-		api.RequestErr(ctx, fmt.Errorf("groupUUID not exists"))
+	if !s.ModelService.CheckExists("modelGroup", modelGroupUuid) {
+		api.RequestDataErr(ctx, "groupUUID not exists", http.StatusBadRequest)
 		return
 	}
-	if err := json.Unmarshal(rawData, &s.Model); err != nil {
+	if err := json.Unmarshal(rawData, &model); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	err = s.ModelService.ChangeModelGroup(modelGroupUuid)
+	err = s.ModelService.ChangeModelGroup(&model, modelGroupUuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, s.Model)
+	api.RequestOK(ctx, model)
 }
 
 func (s *Server) putModel(ctx *gin.Context) {
@@ -139,18 +146,19 @@ func (s *Server) putModel(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	uuid := ctx.Param("uuid")
+	uuid := ctx.DefaultQuery("uuid", "")
 	originModel := &store.Model{}
-	err = originModel.Get(uuid)
-	if err != nil {
+	if !s.ModelService.CheckExists("model", uuid) {
 		api.RequestErr(ctx, fmt.Errorf("get origin model error"))
 		return
 	}
-	if err := json.Unmarshal(rawData, &s.Model); err != nil {
+
+	model := store.Model{}
+	if err := json.Unmarshal(rawData, &model); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	s.Model.UUID = originModel.UUID
+	model.UUID = originModel.UUID
 	unstructured := make(map[string]interface{})
 	if err := json.Unmarshal(rawData, &unstructured); err != nil {
 		api.RequestErr(ctx, err)
@@ -161,7 +169,7 @@ func (s *Server) putModel(ctx *gin.Context) {
 		api.RequestErr(ctx, fmt.Errorf("modelgroup not exists"))
 		return
 	}
-	if err := s.ModelService.ChangeModelGroup(modelGroupUuid); err != nil {
+	if err := s.ModelService.ChangeModelGroup(&model, modelGroupUuid); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
@@ -170,8 +178,13 @@ func (s *Server) putModel(ctx *gin.Context) {
 }
 
 func (s *Server) deleteModel(ctx *gin.Context) {
-	uuid := ctx.Param("uuid")
-	err := s.Model.Delete(uuid)
+	uuid := ctx.DefaultQuery("uuid", "")
+	model, err := s.ModelService.GetModelInstance(uuid)
+	if err != nil {
+		api.RequestErr(ctx, fmt.Errorf("get model fail"))
+		return
+	}
+	err = model.Delete(s.ModelService.Session)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return

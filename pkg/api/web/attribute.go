@@ -42,7 +42,7 @@ func (s *Server) createAttributeGroup(ctx *gin.Context) {
 		return
 	}
 	modelUUID := fmt.Sprintf("%v", unstructured["modeluuid"])
-	if err := s.Model.Get(modelUUID); err != nil {
+	if err := s.Model.Get(s.ModelService.Session, modelUUID); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}

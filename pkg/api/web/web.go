@@ -15,24 +15,25 @@ type Server struct {
 
 func NewServer(apiServer api.IApiServer) *Server {
 	apiServer.GINEngine()
+	ms, as := api.NewService()
 	server := &Server{
 		apiServer,
-		&service.ModelService{},
-		&service.AttributeService{},
+		ms,
+		as,
 	}
 	groupRoute := apiServer.GINEngine().Group(common.WEB_API_GROUP)
 
-	groupRoute.GET("/model-group", server.getAllGroup)
-	groupRoute.GET("/model-group/:uuid", server.getGroup)
-	groupRoute.POST("/model-group", server.createGroup)
-	groupRoute.PUT("/model-group/:uuid", server.putGroup)
-	groupRoute.DELETE("/model-group/:uuid", server.deleteGroup)
+	groupRoute.POST("/model/model-group-list", server.getAllGroup)
+	groupRoute.POST("/model/model-group-detail", server.getGroup)
+	groupRoute.POST("/model/model-group-add", server.createGroup)
+	groupRoute.POST("/model/model-group-update", server.putGroup)
+	groupRoute.POST("/model/model-group-delete", server.deleteGroup)
 
-	groupRoute.GET("/model", server.getAllModel)
-	groupRoute.GET("/model/:uuid", server.getModel)
-	groupRoute.POST("/model", server.createModel)
-	groupRoute.PUT("/model/:uuid", server.putModel)
-	groupRoute.DELETE("/model/:uuid", server.deleteModel)
+	groupRoute.POST("/model/model-list", server.getAllModel)
+	groupRoute.POST("/model/model-detail", server.getModel)
+	groupRoute.POST("/model/model-add", server.createModel)
+	groupRoute.POST("/model/model-update", server.putModel)
+	groupRoute.POST("/model/model-delete", server.deleteModel)
 
 	groupRoute.GET("/attribute-group", server.getAllAttributeGroup)
 	groupRoute.GET("/attribute-group/:uuid", server.getAttributeGroup)
