@@ -42,12 +42,17 @@ func (m *AttributeGroup) AddAttribute(target *Attribute) {
 	m.Attributes = append(m.Attributes, target)
 }
 
-func (ag *AttributeGroup) LoadAll(session *gogm.Session, uuid string) error {
+func (ag *AttributeGroup) LoadAll(session *gogm.Session, uuid string) ([]*AttributeGroup, error) {
+	attributeGroup := make([]*AttributeGroup, 0)
 	query := fmt.Sprintf("match (a:AttributeGroup)-[r:GroupBy]->(b:Model) where b.uuid = $uuid return a")
 	properties := map[string]interface{}{
 		"uuid": uuid,
 	}
-	return session.Query(query, properties, ag)
+	err := session.Query(query, properties, &attributeGroup)
+	if err != nil {
+		return nil, err
+	}
+	return attributeGroup, nil
 }
 
 func (ag *AttributeGroup) Save(session *gogm.Session) error {

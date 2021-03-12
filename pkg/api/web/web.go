@@ -41,11 +41,11 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.POST("/model/attribute-group-update", server.putAttributeGroup)
 	groupRoute.POST("/model/attribute-group-delete", server.deleteAttributeGroup)
 
-	groupRoute.GET("/attribute", server.getAllAttribute)
-	groupRoute.GET("/attribute/:uuid", server.getAttribute)
-	groupRoute.POST("/attribute", server.createAttribute)
-	groupRoute.PUT("/attribute/:uuid", server.putAttribute)
-	groupRoute.DELETE("/attribute/:uuid", server.deleteAttribute)
+	groupRoute.POST("/model/attribute-list", server.getAllAttribute)
+	groupRoute.POST("/model/attribute-detail", server.getAttribute)
+	groupRoute.POST("/model/attribute-add", server.createAttribute)
+	groupRoute.POST("/model/attribute-update", server.putAttribute)
+	groupRoute.POST("/model/attribute-delete", server.deleteAttribute)
 
 	// resource
 	resource := &ResourceApi{&service.ResourceService{}}

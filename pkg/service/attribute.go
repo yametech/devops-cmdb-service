@@ -9,6 +9,8 @@ import (
 	"sync"
 )
 
+
+
 type AttributeService struct {
 	AttributeGroup store.AttributeGroup
 	Attribute      store.Attribute
@@ -35,9 +37,9 @@ func (as *AttributeService) CheckExists(modelType, uuid string) bool {
 }
 
 func (as *AttributeService) ChangeModelGroup(attribute *store.Attribute, uuid string) error {
+	attributeGroup, err := as.GetAttributeGroupInstance(uuid)
 	as.Mutex.Lock()
 	defer as.Mutex.Unlock()
-	attributeGroup, err := as.GetAttributeGroupInstance(uuid)
 	if err != nil {
 		return err
 	}
@@ -107,7 +109,7 @@ func (as *AttributeService) GetAttributeGroupInstance(uuid string) (*store.Attri
 
 	attribute, err := as.Attribute.LoadAll(as.Session, attributeGroup.UUID)
 	if err != nil {
-		return nil, err
+		return attributeGroup, nil
 	}
 	attributeGroup.Attributes = *attribute
 	return attributeGroup, nil
@@ -181,7 +183,7 @@ func (as *AttributeService) GetAttributeList(limit string, pageNumber string) (*
 		"skip":  (pageNumberInt - 1) * limitInt,
 		"limit": limitInt,
 	}
-	if err := store.GetSession(true).Query(query, properties, attributeList); err != nil {
+	if err := store.GetSession(true).Query(query, properties, &attributeList); err != nil {
 		return nil, err
 	}
 	return &attributeList, nil

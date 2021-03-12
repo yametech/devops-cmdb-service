@@ -15,20 +15,20 @@ type ModelService struct {
 	mutex      sync.Mutex
 }
 
-func (as *ModelService) CheckExists(modelType, uuid string) bool {
-	as.mutex.Lock()
-	defer as.mutex.Unlock()
+func (ms *ModelService) CheckExists(modelType, uuid string) bool {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
 	switch modelType {
 	case "model":
 		model := store.Model{}
-		err := model.Get(as.Session, uuid)
+		err := model.Get(ms.Session, uuid)
 		if err != nil {
 			return false
 		}
 		return true
 	case "modelGroup":
 		modelGroup := store.ModelGroup{}
-		err := modelGroup.Get(as.Session, uuid)
+		err := modelGroup.Get(ms.Session, uuid)
 		if err != nil {
 			return false
 		}
@@ -37,11 +37,11 @@ func (as *ModelService) CheckExists(modelType, uuid string) bool {
 	return false
 }
 
-func (as *ModelService) ChangeModelGroup(model *store.Model, uuid string) error {
-	as.mutex.Lock()
-	defer as.mutex.Unlock()
+func (ms *ModelService) ChangeModelGroup(model *store.Model, uuid string) error {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
 	modelGroup := store.ModelGroup{}
-	if err := modelGroup.Get(as.Session, uuid); err != nil {
+	if err := modelGroup.Get(ms.Session, uuid); err != nil {
 		return err
 	}
 	query := fmt.Sprintf("match (a:Model)-[r:GroupBy]->(b:ModelGroup)where a.uuid=$uuid delete r")
@@ -50,28 +50,28 @@ func (as *ModelService) ChangeModelGroup(model *store.Model, uuid string) error 
 	}
 	_ = store.GetSession(false).Query(query, properties, nil)
 	model.ModelGroup = &modelGroup
-	if err := model.Save(as.Session); err != nil {
+	if err := model.Save(ms.Session); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (as *ModelService) CleanModelGroup(uuid string) error {
-	as.mutex.Lock()
-	defer as.mutex.Unlock()
-	if err := as.ModelGroup.Get(as.Session, uuid); err != nil {
+func (ms *ModelService) CleanModelGroup(uuid string) error {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
+	if err := ms.ModelGroup.Get(ms.Session, uuid); err != nil {
 		return err
 	}
-	as.Model.ModelGroup = &as.ModelGroup
-	if err := as.Model.Save(as.Session); err != nil {
+	ms.Model.ModelGroup = &ms.ModelGroup
+	if err := ms.Model.Save(ms.Session); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (as *ModelService) GetGroupList(limit, pageNumber string) (*[]store.ModelGroup, error) {
-	as.mutex.Lock()
-	defer as.mutex.Unlock()
+func (ms *ModelService) GetGroupList(limit, pageNumber string) (*[]store.ModelGroup, error) {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
 	limitInt, err := strconv.Atoi(limit)
 	if err != nil || limitInt < 0 {
 		return nil, err
@@ -86,12 +86,12 @@ func (as *ModelService) GetGroupList(limit, pageNumber string) (*[]store.ModelGr
 		"skip":  (pageNumberInt - 1) * limitInt,
 		"limit": limitInt,
 	}
-	err = as.Session.Query(query, properties, &allMG)
+	err = ms.Session.Query(query, properties, &allMG)
 	if err != nil {
 		return nil, err
 	}
 	for i, v := range allMG {
-		models, err := as.Model.LoadAll(as.Session, v.UUID)
+		models, err := ms.Model.LoadAll(ms.Session, v.UUID)
 		if err != nil {
 			return nil, err
 		}
@@ -100,9 +100,24 @@ func (as *ModelService) GetGroupList(limit, pageNumber string) (*[]store.ModelGr
 	return &allMG, nil
 }
 
-func (as *ModelService) GetModelList(limit string, pageNumber string) (*[]store.Model, error) {
-	as.mutex.Lock()
-	defer as.mutex.Unlock()
+func (ms *ModelService) GetModelGroupInstance(uuid string) (*store.ModelGroup, error) {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
+	modelGroup := &store.ModelGroup{}
+	if err := modelGroup.Get(ms.Session, uuid); err != nil {
+		return nil, err
+	}
+	models, err := ms.Model.LoadAll(ms.Session, modelGroup.UUID)
+	if err != nil {
+		return nil, err
+	}
+	modelGroup.Models = models
+	return modelGroup, nil
+}
+
+func (ms *ModelService) GetModelList(limit string, pageNumber string) (*[]store.Model, error) {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
 	limitInt, err := strconv.Atoi(limit)
 	if err != nil || limitInt < 0 {
 		return nil, err
@@ -123,30 +138,26 @@ func (as *ModelService) GetModelList(limit string, pageNumber string) (*[]store.
 	return &allModel, nil
 }
 
-func (as *ModelService) GetModelGroupInstance(uuid string) (*store.ModelGroup, error) {
-	as.mutex.Lock()
-	defer as.mutex.Unlock()
-	modelGroup := &store.ModelGroup{}
-	if err := modelGroup.Get(as.Session, uuid); err != nil {
-		return nil, err
-	}
-	models, err := as.Model.LoadAll(as.Session, modelGroup.UUID)
-	if err != nil {
-		return nil, err
-	}
-	modelGroup.Models = models
-	return modelGroup, nil
-}
-
-func (as *ModelService) GetModelInstance(uuid string) (*store.Model, error) {
-	as.mutex.Lock()
-	defer as.mutex.Unlock()
+func (ms *ModelService) GetModelInstance(uuid string) (*store.Model, error) {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
 	model := &store.Model{}
-	if err := model.Get(as.Session, uuid); err != nil {
+	if err := model.Get(ms.Session, uuid); err != nil {
 		return nil, err
 	}
-	attributeGroup := &store.AttributeGroup{}
-	_ = attributeGroup
-
+	agInstance := &store.AttributeGroup{}
+	attributeInstance := &store.Attribute{}
+	attributeGroup, err := agInstance.LoadAll(ms.Session, model.UUID)
+	if err != nil {
+		return model, nil
+	}
+	for i, _ := range attributeGroup {
+		attribute, err := attributeInstance.LoadAll(ms.Session, attributeGroup[i].UUID)
+		if err != nil {
+			continue
+		}
+		attributeGroup[i].Attributes = *attribute
+	}
+	model.AttributeGroups = attributeGroup
 	return model, nil
 }

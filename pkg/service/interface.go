@@ -3,8 +3,10 @@ package service
 import (
 	"flag"
 	"fmt"
+	"github.com/mindstand/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/core"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
+	"sync"
 )
 
 type Service struct {
@@ -13,6 +15,11 @@ type Service struct {
 
 type fakeService struct {
 	Service
+}
+
+type NeoSession struct {
+	Session        *gogm.Session
+	Mutex          sync.Mutex
 }
 
 func (f *fakeService) GetMember(uuid string) core.IObject {
