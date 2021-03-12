@@ -7,7 +7,6 @@ import (
 	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/service"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
-	"io/ioutil"
 	"strconv"
 )
 
@@ -17,31 +16,31 @@ type ResourceApi struct {
 }
 
 // 获取资源实例字段列表
-func (r *ResourceApi) GetModelAttributeList(ctx *gin.Context) {
+func (r *ResourceApi) getModelAttribute(ctx *gin.Context) {
 	result := &[]common.ModelAttributeVisibleVO{}
-	utils.SimpleConvert(result, r.resourceService.GetModelAttributeList(ctx.Param("modelUid")))
+	utils.SimpleConvert(result, r.resourceService.GetModelAttributeList(ctx.Param("uid")))
 	Success(ctx, result)
 }
 
 // 模型字段预览显示设置
-func (r *ResourceApi) ConfigModelAttribute(ctx *gin.Context) {
-	b, _ := ioutil.ReadAll(ctx.Request.Body)
+func (r *ResourceApi) configModelAttribute(ctx *gin.Context) {
+	b, _ := ctx.GetRawData()
 	req := &common.ConfigModelAttributeVO{}
 	json.Unmarshal(b, req)
-	r.resourceService.SetModelAttribute(req.ModelUid, req.Columns)
+	r.resourceService.SetModelAttribute(req.Uid, req.Columns)
 	Success(ctx, nil)
 }
 
-// 获取模型列表
-func (r *ResourceApi) GetModelList(ctx *gin.Context) {
-	result := &[]common.SimpleModelVO{}
-	utils.SimpleConvert(result, r.resourceService.GetModeList())
+// 获取模型菜单
+func (r *ResourceApi) getModelMenu(ctx *gin.Context) {
+	result := &[]common.ModelMenuVO{}
+	utils.SimpleConvert(result, r.resourceService.GetAllModeList())
 	Success(ctx, result)
 }
 
-func (r *ResourceApi) AddResource(ctx *gin.Context) {
-	b, _ := ioutil.ReadAll(ctx.Request.Body)
-	result, err := r.resourceService.AddResource(string(b), "")
+func (r *ResourceApi) addResource(ctx *gin.Context) {
+	rawData, _ := ctx.GetRawData()
+	result, err := r.resourceService.AddResource(string(rawData), "")
 	if err != nil {
 		panic(err)
 	}
@@ -49,13 +48,24 @@ func (r *ResourceApi) AddResource(ctx *gin.Context) {
 }
 
 // 获取模型实例列表
-func (r *ResourceApi) GetResourcePageList(ctx *gin.Context) {
-	currentPage, _ := strconv.Atoi(ctx.Query("currentPage"))
-	pageSize, _ := strconv.Atoi(ctx.Query("pageSize"))
-	Success(ctx, r.resourceService.GetResourcePageList(ctx.Query("modelUid"), currentPage, pageSize))
+func (r *ResourceApi) getResourceListPage(ctx *gin.Context) {
+	pageSizeStr := ctx.DefaultQuery("page_size", "10")
+	pageNumberStr := ctx.DefaultQuery("page_number", "1")
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize <= 0 {
+		Error(ctx, "参数有误")
+		return
+	}
+	pageNumber, err := strconv.Atoi(pageNumberStr)
+	if err != nil || pageNumber <= 0 {
+		Error(ctx, "参数有误")
+		return
+	}
+
+	Success(ctx, r.resourceService.GetResourceListPage(ctx.Query("modelUid"), pageNumber, pageSize))
 }
 
-func (r *ResourceApi) GetResourceDetail(ctx *gin.Context) {
+func (r *ResourceApi) getResourceDetail(ctx *gin.Context) {
 	result, err := r.resourceService.GetResourceDetail(ctx.Param("uuid"))
 	if err != nil {
 		result = nil
@@ -64,7 +74,7 @@ func (r *ResourceApi) GetResourceDetail(ctx *gin.Context) {
 	Success(ctx, result)
 }
 
-func (r *ResourceApi) DeleteResource(ctx *gin.Context) {
+func (r *ResourceApi) deleteResource(ctx *gin.Context) {
 	err := r.resourceService.DeleteResource(ctx.Param("uuid"))
 	if err != nil {
 		fmt.Printf("找不到记录,uuid:%v, msg:%v\n", ctx.Param("uuid"), err)
@@ -74,11 +84,13 @@ func (r *ResourceApi) DeleteResource(ctx *gin.Context) {
 	}
 }
 
-func (r *ResourceApi) UpdateResourceAttribute(ctx *gin.Context) {
-	err := r.resourceService.UpdateResourceAttribute(ctx.Query("uuid"), ctx.Query("attributeInsValue"), "")
+func (r *ResourceApi) updateResourceAttribute(ctx *gin.Context) {
+	rawData, _ := ctx.GetRawData()
+	dataMap := map[string]string{}
+	_ = json.Unmarshal(rawData, &dataMap)
+	err := r.resourceService.UpdateResourceAttribute(ctx.Param("uuid"), dataMap["attributeInsValue"], "")
 	if err != nil {
-		//b, _ := ioutil.ReadAll(ctx.Request.Body)
-		fmt.Printf("UpdateResourceAttribute更新失败,RequestURI:%v, msg:%v\n", ctx.Request.RequestURI, err)
+		fmt.Printf("UpdateResourceAttribute更新失败, msg:%v\n", err)
 		Error(ctx, err.Error())
 	} else {
 		Success(ctx, "更新成功")

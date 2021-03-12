@@ -21,7 +21,6 @@ func NewServer(apiServer api.IApiServer) *Server {
 		&service.AttributeService{},
 	}
 	groupRoute := apiServer.GINEngine().Group(common.WEB_API_GROUP)
-	groupRoute.GET("/member", server.ListMemberApi)
 
 	groupRoute.POST("/model/model-group-list", server.getAllGroup)
 	groupRoute.POST("/model/model-group-detail/:uuid", server.getGroup)
@@ -49,14 +48,21 @@ func NewServer(apiServer api.IApiServer) *Server {
 
 	// resource
 	resource := &ResourceApi{&service.ResourceService{}}
-	groupRoute.GET("/resource/model-attribute-list/:modelUid", resource.GetModelAttributeList)
-	groupRoute.GET("/resource/model-list", resource.GetModelList)
-	//groupRoute.GET("/resource/resource-list/:modelUid", resource.GetResourceList)
-	groupRoute.GET("/resource/resource-page-list", resource.GetResourcePageList)
-	groupRoute.GET("/resource/resource-detail/:uuid", resource.GetResourceDetail)
-	groupRoute.POST("/resource/add-resource", resource.AddResource)
-	groupRoute.DELETE("/resource/delete-resource/:uuid", resource.DeleteResource)
-	groupRoute.PUT("/resource/resource-attribute-update", resource.UpdateResourceAttribute)
+	groupRoute.GET("/model-menu", resource.getModelMenu)
+	groupRoute.GET("/model-attribute/:uid", resource.getModelAttribute)
+	groupRoute.PUT("/model-attribute/:uid", resource.configModelAttribute)
+	groupRoute.GET("/resource", resource.getResourceListPage)
+	groupRoute.GET("/resource/:uuid", resource.getResourceDetail)
+	groupRoute.POST("/resource", resource.addResource)
+	groupRoute.DELETE("/resource/:uuid", resource.deleteResource)
+	groupRoute.PUT("/resource-attribute/:uuid", resource.updateResourceAttribute)
+
+	// relationship
+	relationship := &RelationshipApi{&service.RelationshipService{}}
+	groupRoute.GET("/model-relation/:uid", relationship.getModelRelationList)
+	groupRoute.POST("/model-relation", relationship.addModelRelation)
+	groupRoute.DELETE("/model-relation/:uid", relationship.deleteModelRelation)
+	groupRoute.PUT("/model-relation/:uid", relationship.updateModelRelation)
 
 	return server
 }
@@ -67,8 +73,4 @@ func Success(ctx *gin.Context, data interface{}) {
 
 func Error(ctx *gin.Context, msg string) {
 	ctx.JSON(200, &common.ApiResponseVO{Msg: msg, Code: 400})
-}
-
-func (s *Server) ListMemberApi(ctx *gin.Context) {
-	ctx.JSON(200, map[string]interface{}{"abc": "123"})
 }
