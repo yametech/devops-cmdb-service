@@ -54,3 +54,11 @@ type UpdateModelRelationVO struct {
 	TargetUid       string `json:"targetUid"`
 	Comment         string `json:"comment"`
 }
+
+type ResourceListPageParamVO struct {
+	PageSize   int                `json:"pageSize" binding:"required,gte=0"`
+	Current    int                `json:"current" binding:"required,gte=0"`
+	ModelUid   string             `json:"modelUid" binding:"required"`
+	QueryValue string             `json:"queryValue" binding:""`
+	QueryMap   *map[string]string `json:"queryMap" binding:""`
+}
