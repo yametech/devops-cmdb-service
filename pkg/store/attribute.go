@@ -51,9 +51,9 @@ type Attribute struct {
 
 func (a *Attribute) LoadAll(session *gogm.Session, groupId string) (*[]*Attribute, error) {
 	aList := make([]*Attribute, 0)
-	query := fmt.Sprintf("match (a:Attribute)-[r:GroupBy]->(b:AttributeGroup)where b.uid=$uid return a")
+	query := fmt.Sprintf("match (a:Attribute)-[r:GroupBy]->(b:AttributeGroup)where b.uuid=$uuid return a")
 	properties := map[string]interface{}{
-		"uid": groupId,
+		"uuid": groupId,
 	}
 	err := session.Query(query, properties, &aList)
 	if err != nil {

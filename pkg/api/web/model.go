@@ -177,7 +177,6 @@ func (s *Server) putModel(ctx *gin.Context) {
 		return
 	}
 
-	originModel := &store.Model{}
 	if !s.ModelService.CheckExists("model", unstructured["uuid"]) {
 		api.RequestErr(ctx, fmt.Errorf("get origin model error"))
 		return
@@ -188,7 +187,7 @@ func (s *Server) putModel(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	model.UUID = originModel.UUID
+	model.UUID = unstructured["uuid"]
 
 	modelGroupUuid := fmt.Sprintf("%v", unstructured["modelgroup"])
 	if exists := s.ModelService.CheckExists("modelGroup", modelGroupUuid); exists != true {

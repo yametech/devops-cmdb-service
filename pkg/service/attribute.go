@@ -9,8 +9,6 @@ import (
 	"sync"
 )
 
-
-
 type AttributeService struct {
 	AttributeGroup store.AttributeGroup
 	Attribute      store.Attribute
@@ -38,12 +36,13 @@ func (as *AttributeService) CheckExists(modelType, uuid string) bool {
 
 func (as *AttributeService) ChangeModelGroup(attribute *store.Attribute, uuid string) error {
 	attributeGroup, err := as.GetAttributeGroupInstance(uuid)
-	as.Mutex.Lock()
-	defer as.Mutex.Unlock()
 	if err != nil {
 		return err
 	}
-	query := fmt.Sprintf("match (a:Model)-[r:GroupBy]->(b:ModelGroup)where a.uuid=$uuid delete r")
+	as.Mutex.Lock()
+	defer as.Mutex.Unlock()
+
+	query := fmt.Sprintf("match (a:Attribute)-[r:GroupBy]->(b:AttributeGroup)where a.uuid=$uuid delete r")
 	properties := map[string]interface{}{
 		"uuid": attribute.UUID,
 	}
@@ -85,13 +84,13 @@ func (as *AttributeService) GetAttributeGroupList(limit string, pageNumber strin
 		"skip":  (pageNumberInt - 1) * limitInt,
 		"limit": limitInt,
 	}
-	if err := as.Session.Query(query, properties, allAG); err != nil {
+	if err := as.Session.Query(query, properties, &allAG); err != nil {
 		return nil, err
 	}
 	for i, v := range allAG {
 		attributes, err := as.Attribute.LoadAll(as.Session, v.UUID)
 		if err != nil {
-			return nil, nil
+			continue
 		}
 		allAG[i].Attributes = *attributes
 	}
