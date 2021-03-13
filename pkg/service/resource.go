@@ -26,6 +26,11 @@ func (rs ResourceService) GetModelInfoForIns(uid string) (interface{}, error) {
 		return nil, err
 	}
 
+	resource := &store.Resource{}
+	utils.SimpleConvert(resource, m)
+	resource.ModelUid = m.Uid
+	resource.ModelName = m.Name
+
 	query := "MATCH (a:Model)-[]-(b:AttributeGroup)-[]-(c:Attribute) WHERE a.uid =$uid RETURN a,b,c"
 	result, err := rs.ManualQueryRaw(query, map[string]interface{}{"uid": uid})
 	if err != nil {
@@ -35,18 +40,18 @@ func (rs ResourceService) GetModelInfoForIns(uid string) (interface{}, error) {
 	for _, row := range result {
 		// 属性
 		o := row[2].(*gogm.NodeWrap)
-		attribute := &store.Attribute{}
+		attribute := &store.AttributeIns{}
 		utils.SimpleConvert(attribute, &o.Props)
 
 		// 属性分组
 		o = row[1].(*gogm.NodeWrap)
-		attributeGroup := &store.AttributeGroup{}
+		attributeGroup := &store.AttributeGroupIns{}
 		utils.SimpleConvert(attributeGroup, &o.Props)
 
-		attributeGroup.AddAttribute(attribute)
-		m.AddAttributeGroup(attributeGroup)
+		attributeGroup.AddAttributeIns(attribute)
+		resource.AddAttributeGroupIns(attributeGroup)
 	}
-	return m, nil
+	return resource, nil
 }
 
 // 模型属性字段列表
@@ -84,11 +89,11 @@ func (rs ResourceService) GetResourceListPageByMap(modelUid string, pageNumber i
 	fmt.Println(query)
 	srcList := &[]store.Resource{}
 	totalRaw, err := rs.ManualQueryRaw(query+"RETURN COUNT(distinct a)", nil)
-	printOut(totalRaw[0][0])
-	total := totalRaw[0][0].(int64)
 	if err != nil {
 		panic(err)
 	}
+	printOut(totalRaw[0][0])
+	total := totalRaw[0][0].(int64)
 	if total <= 0 {
 		return common.PageResultVO{}
 	}

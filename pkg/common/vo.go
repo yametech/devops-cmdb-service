@@ -56,9 +56,9 @@ type UpdateModelRelationVO struct {
 }
 
 type ResourceListPageParamVO struct {
-	PageSize   int                `json:"pageSize" binding:"required,gte=0"`
-	Current    int                `json:"current" binding:"required,gte=0"`
-	ModelUid   string             `json:"modelUid" binding:"required"`
+	PageSize   int                `form:"pageSize" json:"pageSize" binding:"required,gte=0"`
+	Current    int                `form:"current" json:"current" binding:"required,gte=0"`
+	ModelUid   string             `form:"model_uid" json:"modelUid" binding:"required"`
 	QueryValue string             `json:"queryValue" binding:""`
 	QueryMap   *map[string]string `json:"queryMap" binding:""`
 }
