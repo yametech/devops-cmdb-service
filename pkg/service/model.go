@@ -87,9 +87,9 @@ func (ms *ModelService) GetGroupList(limit, pageNumber string) (*[]store.ModelGr
 		"limit": limitInt,
 	}
 	err = ms.Session.Query(query, properties, &allMG)
-	if err != nil {
-		return nil, err
-	}
+	//if err != nil {
+	//	return nil, err
+	//}
 	for i, v := range allMG {
 		models, err := ms.Model.LoadAll(ms.Session, v.UUID)
 		if err != nil {

@@ -27,7 +27,7 @@ type AttributeCommon struct {
 	Minimum string `json:"minimum" gogm:"name=minimum"`
 	// 枚举值：{id1:value1,id2:value2...}
 	Enums string `json:"enums" gogm:"name=enums"`
-	// 列表：{value1,value2}
+	// 列表：value1,value2
 	ListValues string `json:"listValues" gogm:"name=listValues"`
 	// 用户提示内容
 	Tips string `json:"tips" gogm:"name=tips"`
@@ -51,7 +51,7 @@ type Attribute struct {
 
 func (a *Attribute) LoadAll(session *gogm.Session, groupId string) (*[]*Attribute, error) {
 	aList := make([]*Attribute, 0)
-	query := fmt.Sprintf("match (a:Attribute)-[r:GroupBy]->(b:AttributeGroup)where b.uuid=$uuid return a")
+	query := fmt.Sprintf("match (a:Attribute)-[r:GroupBy]->(b:AttributeGroup) where b.uuid=$uuid return a")
 	properties := map[string]interface{}{
 		"uuid": groupId,
 	}

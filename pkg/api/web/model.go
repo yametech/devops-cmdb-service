@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/yametech/devops-cmdb-service/pkg/api"
+	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
+	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"net/http"
 )
 
@@ -137,27 +139,21 @@ func (s *Server) getModel(ctx *gin.Context) {
 }
 
 func (s *Server) createModel(ctx *gin.Context) {
-	rawData, err := ctx.GetRawData()
+	vo := &common.AddModelVO{}
+	err := ctx.BindJSON(vo)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	unstructured := make(map[string]string)
-	if err := ctx.BindJSON(&unstructured); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	model := store.Model{}
-	modelGroupUuid := fmt.Sprintf("%v", unstructured["modelgroup"])
+
+	model := &store.Model{}
+	modelGroupUuid := fmt.Sprintf("%v", vo.ModelGroupUUID)
 	if !s.ModelService.CheckExists("modelGroup", modelGroupUuid) {
 		api.RequestDataErr(ctx, "groupUUID not exists", http.StatusBadRequest)
 		return
 	}
-	if err := json.Unmarshal(rawData, &model); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	err = s.ModelService.ChangeModelGroup(&model, modelGroupUuid)
+	utils.SimpleConvert(model, vo)
+	err = s.ModelService.ChangeModelGroup(model, modelGroupUuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return

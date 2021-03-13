@@ -14,11 +14,11 @@ type RelationshipApi struct {
 func (r *RelationshipApi) router(e *gin.Engine) {
 	groupRoute := e.Group(common.WEB_API_GROUP)
 
-	groupRoute.GET("/model-relation/:uid", r.getModelRelationList)
-	groupRoute.GET("/model-relation/:uid/usage", r.getModelRelationUsageCount)
-	groupRoute.POST("/model-relation", r.addModelRelation)
-	groupRoute.DELETE("/model-relation/:uid", r.deleteModelRelation)
-	groupRoute.PUT("/model-relation/:uid", r.updateModelRelation)
+	groupRoute.POST("/model-relation-list", r.getModelRelationList)
+	groupRoute.POST("/model-relation-usage", r.getModelRelationUsageCount)
+	groupRoute.POST("/add-model-relation", r.addModelRelation)
+	groupRoute.POST("/delete-model-relation", r.deleteModelRelation)
+	groupRoute.POST("/update-model-relation", r.updateModelRelation)
 
 	groupRoute.GET("/resource-relation/:uuid", r.getResourceRelationList)
 	groupRoute.POST("/resource-relation", r.addResourceRelation)
@@ -32,12 +32,16 @@ func (r *RelationshipApi) addModelRelation(ctx *gin.Context) {
 }
 
 func (r *RelationshipApi) deleteModelRelation(ctx *gin.Context) {
-	result, err := r.relationshipService.DeleteModelRelation(ctx.Param("uid"))
+	data, _ := ctx.GetRawData()
+	param, _ := utils.Stream2Json(data)
+	result, err := r.relationshipService.DeleteModelRelation((*param)["uid"])
 	ResultHandle(ctx, result, err)
 }
 
 func (r *RelationshipApi) getModelRelationList(ctx *gin.Context) {
-	result := r.relationshipService.GetModelRelationList(ctx.Param("uid"))
+	data, _ := ctx.GetRawData()
+	param, _ := utils.Stream2Json(data)
+	result := r.relationshipService.GetModelRelationList((*param)["uid"])
 	Success(ctx, result)
 }
 
@@ -48,7 +52,7 @@ func (r *RelationshipApi) updateModelRelation(ctx *gin.Context) {
 }
 
 func (r *RelationshipApi) getModelRelationUsageCount(ctx *gin.Context) {
-	result, err := r.relationshipService.GetResourceRelationsByModelRelationUid(ctx.Param("uid"))
+	result, err := r.relationshipService.GetResourceRelationsByModelRelationUid(ctx.Query("uid"))
 	ResultHandle(ctx, len(result), err)
 }
 
