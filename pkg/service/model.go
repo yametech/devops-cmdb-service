@@ -205,6 +205,17 @@ func (ms *ModelService) SaveRelation(relation *store.RelationshipModel) error {
 	return nil
 }
 
+func (ms *ModelService) UpdateRelation(relation *store.RelationshipModel, uuid string) error {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
+	relation.UUID = uuid
+	err := relation.Update(ms.Session)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (ms *ModelService) DeleteRelation(relation *store.RelationshipModel) error {
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()

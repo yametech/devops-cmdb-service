@@ -175,6 +175,11 @@ func (m *RelationshipModel) Save(session *gogm.Session) error {
 	return session.Save(m)
 }
 
+func (m *RelationshipModel) Update(session *gogm.Session) error {
+	m.UpdateTime = time.Now().Unix()
+	return session.Save(m)
+}
+
 func (m *RelationshipModel) Delete(session *gogm.Session) error {
 	return session.Delete(m)
 }

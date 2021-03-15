@@ -49,7 +49,7 @@ func NewServer(apiServer api.IApiServer) *Server {
 
 	groupRoute.POST("/model/relationship-list", server.getAllRelation)
 	groupRoute.POST("/model/relationship-add", server.createRelation)
-	//groupRoute.POST("/model/relationship-update", server.createAttribute)
+	groupRoute.POST("/model/relationship-update", server.updateRelation)
 	groupRoute.POST("/model/relationship-delete", server.deleteRelation)
 
 	// resource

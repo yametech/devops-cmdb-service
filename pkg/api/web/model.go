@@ -251,6 +251,30 @@ func (s *Server) createRelation(ctx *gin.Context) {
 	api.RequestOK(ctx, modelRelation)
 }
 
+func (s *Server) updateRelation(ctx *gin.Context) {
+	rawData, err := ctx.GetRawData()
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	unstructured := make(map[string]string)
+	if err := json.Unmarshal(rawData, &unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+
+	modelRelation := store.RelationshipModel{}
+	if err := json.Unmarshal(rawData, &modelRelation); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	if err := s.ModelService.UpdateRelation(&modelRelation, unstructured["uuid"]); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	api.RequestOK(ctx, modelRelation)
+}
+
 func (s *Server) deleteRelation(ctx *gin.Context) {
 	unstructured := make(map[string]string)
 	if err := ctx.BindJSON(&unstructured); err != nil {
