@@ -161,3 +161,56 @@ func (ms *ModelService) GetModelInstance(uuid string) (*store.Model, error) {
 	model.AttributeGroups = attributeGroup
 	return model, nil
 }
+
+func (ms *ModelService) GetRelationList(limit string, pageNumber string) (*[]store.RelationshipModel, error) {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil || limitInt < 0 {
+		return nil, err
+	}
+	pageNumberInt, err := strconv.Atoi(pageNumber)
+	if err != nil || pageNumberInt < 0 {
+		return nil, err
+	}
+	allModel := make([]store.RelationshipModel, 0)
+	query := fmt.Sprintf("match (a:RelationshipModel) return a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit")
+	properties := map[string]interface{}{
+		"skip":  (pageNumberInt - 1) * limitInt,
+		"limit": limitInt,
+	}
+	if err := store.GetSession(true).Query(query, properties, &allModel); err != nil {
+		return nil, err
+	}
+	return &allModel, nil
+}
+
+func (ms *ModelService) GetRelationInstance(uuid string) (*store.RelationshipModel, error) {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
+	relation := &store.RelationshipModel{}
+	if err := relation.Get(ms.Session, uuid); err != nil {
+		return nil, err
+	}
+	return relation, nil
+}
+
+func (ms *ModelService) SaveRelation(relation *store.RelationshipModel) error {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
+	err := relation.Save(ms.Session)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ms *ModelService) DeleteRelation(relation *store.RelationshipModel) error {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
+	err := relation.Delete(ms.Session)
+	if err != nil {
+		return err
+	}
+	return nil
+}

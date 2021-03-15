@@ -217,3 +217,54 @@ func (s *Server) deleteModel(ctx *gin.Context) {
 	}
 	api.RequestOK(ctx, "")
 }
+
+func (s *Server) getAllRelation(ctx *gin.Context) {
+	limit := ctx.DefaultQuery("page_size", "10")
+	pageNumber := ctx.DefaultQuery("page_number", "1")
+
+	returnData, err := s.ModelService.GetRelationList(limit, pageNumber)
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	api.RequestOK(ctx, returnData)
+}
+
+func (s *Server) createRelation(ctx *gin.Context) {
+	rawData, err := ctx.GetRawData()
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	modelRelation := store.RelationshipModel{}
+
+	if err := json.Unmarshal(rawData, &modelRelation); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+
+	if err := s.ModelService.SaveRelation(&modelRelation); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+
+	api.RequestOK(ctx, modelRelation)
+}
+
+func (s *Server) deleteRelation(ctx *gin.Context) {
+	unstructured := make(map[string]string)
+	if err := ctx.BindJSON(&unstructured); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	relation, err := s.ModelService.GetRelationInstance(unstructured["uuid"])
+	if err != nil {
+		api.RequestErr(ctx, fmt.Errorf("get modelRelation fail"))
+		return
+	}
+	if err := s.ModelService.DeleteRelation(relation); err != nil {
+		api.RequestErr(ctx, fmt.Errorf("delete modelRelation fail"))
+		return
+	}
+	api.RequestOK(ctx, "")
+}

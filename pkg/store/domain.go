@@ -159,3 +159,22 @@ func (m *AttributeGroup) GetAttributeByUid(uid string) *Attribute {
 
 	return nil
 }
+
+func (m *RelationshipModel) Get(session *gogm.Session, uuid string) error {
+	query := fmt.Sprintf("match (a:RelationshipModel) where a.uuid = $uuid return a")
+	properties := map[string]interface{}{
+		"uuid": uuid,
+	}
+
+	return session.Query(query, properties, m)
+}
+
+func (m *RelationshipModel) Save(session *gogm.Session) error {
+	m.CreateTime = time.Now().Unix()
+	m.UpdateTime = time.Now().Unix()
+	return session.Save(m)
+}
+
+func (m *RelationshipModel) Delete(session *gogm.Session) error {
+	return session.Delete(m)
+}
