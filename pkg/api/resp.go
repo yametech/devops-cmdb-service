@@ -12,7 +12,7 @@ type message struct {
 }
 
 func RequestErr(g *gin.Context, err error) {
-	g.JSON(http.StatusBadRequest, &message{Data: err.Error(), Msg: "request not match", Code: 400})
+	g.JSON(http.StatusBadRequest, &message{Data: "request not match", Msg: err.Error(), Code: 400})
 	g.Abort()
 }
 
