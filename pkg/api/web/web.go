@@ -13,6 +13,24 @@ type Server struct {
 	*service.AttributeService
 }
 
+// 自定义中间件
+func filterMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 打印日志
+		//start := time.Now()
+		//rawData, _ := c.GetRawData()
+		//fmt.Printf("%v,  \"%v\",   %v  \n", c.Request.Method, c.Request.RequestURI, string(rawData))
+
+		// 用户信息存储
+		//c.Set("user", "中间件")
+
+		//c.Next()
+		//end := time.Now()
+		//latency := end.Sub(start)
+		//fmt.Printf("%v,  \"%v\", 耗时：%v \n", c.Request.Method, c.Request.RequestURI, latency.String())
+	}
+}
+
 func NewServer(apiServer api.IApiServer) *Server {
 	//apiServer.GINEngine()
 	ms, as := api.NewService()
@@ -21,6 +39,8 @@ func NewServer(apiServer api.IApiServer) *Server {
 		ms,
 		as,
 	}
+	apiServer.GINEngine().Use(filterMiddleware())
+
 	groupRoute := apiServer.GINEngine().Group(common.WEB_API_GROUP)
 
 	groupRoute.POST("/model/model-group-list", server.getAllGroup)
@@ -47,10 +67,10 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.POST("/model/attribute-update", server.putAttribute)
 	groupRoute.POST("/model/attribute-delete", server.deleteAttribute)
 
-	groupRoute.POST("/model/relationship-list", server.getAllRelation)
-	groupRoute.POST("/model/relationship-add", server.createRelation)
+	groupRoute.POST("/model/relationship-list", server.getAllRelationship)
+	groupRoute.POST("/model/relationship-add", server.createRelationship)
 	groupRoute.POST("/model/relationship-update", server.updateRelation)
-	groupRoute.POST("/model/relationship-delete", server.deleteRelation)
+	groupRoute.POST("/model/relationship-delete", server.deleteRelationship)
 
 	// resource
 	resource := &ResourceApi{&service.ResourceService{}}

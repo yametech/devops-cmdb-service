@@ -162,7 +162,7 @@ func (ms *ModelService) GetModelInstance(uuid string) (*store.Model, error) {
 	return model, nil
 }
 
-func (ms *ModelService) GetRelationList(limit string, pageNumber string) (*[]store.RelationshipModel, error) {
+func (ms *ModelService) GetRelationshipList(limit string, pageNumber string) (*[]store.RelationshipModel, error) {
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
 	limitInt, err := strconv.Atoi(limit)
@@ -180,12 +180,12 @@ func (ms *ModelService) GetRelationList(limit string, pageNumber string) (*[]sto
 		"limit": limitInt,
 	}
 	if err := store.GetSession(true).Query(query, properties, &allModel); err != nil {
-		return nil, err
+		//return nil, err
 	}
-	return &allModel, nil
+	return &allModel, err
 }
 
-func (ms *ModelService) GetRelationInstance(uuid string) (*store.RelationshipModel, error) {
+func (ms *ModelService) GetRelationshipInstance(uuid string) (*store.RelationshipModel, error) {
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
 	relation := &store.RelationshipModel{}
@@ -195,7 +195,7 @@ func (ms *ModelService) GetRelationInstance(uuid string) (*store.RelationshipMod
 	return relation, nil
 }
 
-func (ms *ModelService) SaveRelation(relation *store.RelationshipModel) error {
+func (ms *ModelService) SaveRelationship(relation *store.RelationshipModel) error {
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
 	err := relation.Save(ms.Session)
@@ -216,7 +216,7 @@ func (ms *ModelService) UpdateRelation(relation *store.RelationshipModel, uuid s
 	return nil
 }
 
-func (ms *ModelService) DeleteRelation(relation *store.RelationshipModel) error {
+func (ms *ModelService) DeleteRelationship(relation *store.RelationshipModel) error {
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
 	err := relation.Delete(ms.Session)
