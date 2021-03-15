@@ -47,6 +47,11 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.POST("/model/attribute-update", server.putAttribute)
 	groupRoute.POST("/model/attribute-delete", server.deleteAttribute)
 
+	groupRoute.POST("/model/relationship-list", server.getAllRelation)
+	groupRoute.POST("/model/relationship-add", server.getAttribute)
+	groupRoute.POST("/model/relationship-update", server.createAttribute)
+	groupRoute.POST("/model/relationship-delete", server.putAttribute)
+
 	// resource
 	resource := &ResourceApi{&service.ResourceService{}}
 	resource.router(apiServer.GINEngine())
