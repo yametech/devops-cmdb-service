@@ -2,13 +2,13 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
-	"net/http"
 )
 
 func (s *Server) getAllGroup(ctx *gin.Context) {
@@ -149,7 +149,7 @@ func (s *Server) createModel(ctx *gin.Context) {
 	model := &store.Model{}
 	modelGroupUuid := fmt.Sprintf("%v", vo.ModelGroupUUID)
 	if !s.ModelService.CheckExists("modelGroup", modelGroupUuid) {
-		api.RequestDataErr(ctx, "groupUUID not exists", http.StatusBadRequest)
+		api.RequestErr(ctx, errors.New("groupUUID not exists"))
 		return
 	}
 	utils.SimpleConvert(model, vo)
@@ -251,28 +251,18 @@ func (s *Server) createRelationship(ctx *gin.Context) {
 	api.RequestOK(ctx, modelRelation)
 }
 
-func (s *Server) updateRelation(ctx *gin.Context) {
-	rawData, err := ctx.GetRawData()
-	if err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	unstructured := make(map[string]string)
-	if err := json.Unmarshal(rawData, &unstructured); err != nil {
+func (s *Server) updateRelationship(ctx *gin.Context) {
+	vo := &common.RelationshipModelUpdateVO{}
+	if err := ctx.ShouldBindJSON(vo); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
 
-	modelRelation := store.RelationshipModel{}
-	if err := json.Unmarshal(rawData, &modelRelation); err != nil {
+	if err := s.ModelService.UpdateRelationship(vo, ""); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	if err := s.ModelService.UpdateRelation(&modelRelation, unstructured["uuid"]); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	api.RequestOK(ctx, modelRelation)
+	api.RequestOK(ctx, nil)
 }
 
 func (s *Server) deleteRelationship(ctx *gin.Context) {

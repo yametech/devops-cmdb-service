@@ -68,3 +68,11 @@ type AddModelVO struct {
 	Uid            string `json:"uid" binding:"required"`
 	Name           string `json:"name" binding:"required"`
 }
+
+type RelationshipModelUpdateVO struct {
+	Uid           string `json:"uid" form:"uid" binding:"required"`
+	Name          string `json:"name" form:"name" binding:"required"`
+	Source2Target string `json:"source2Target" form:"source2Target" binding:"required"`
+	Target2Source string `json:"target2Source" form:"target2Source" binding:"required"`
+	Direction     string `json:"direction" form:"direction" binding:"required"`
+}

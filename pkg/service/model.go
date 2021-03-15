@@ -3,16 +3,19 @@ package service
 import (
 	"fmt"
 	"github.com/mindstand/gogm"
+	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type ModelService struct {
 	Model      store.Model
 	ModelGroup store.ModelGroup
 	Session    *gogm.Session
-	mutex      sync.Mutex
+	store.Neo4jDomain
+	mutex sync.Mutex
 }
 
 func (ms *ModelService) CheckExists(modelType, uuid string) bool {
@@ -205,15 +208,23 @@ func (ms *ModelService) SaveRelationship(relation *store.RelationshipModel) erro
 	return nil
 }
 
-func (ms *ModelService) UpdateRelation(relation *store.RelationshipModel, uuid string) error {
+func (ms *ModelService) UpdateRelationship(vo *common.RelationshipModelUpdateVO, operator string) error {
+	relation := &store.RelationshipModel{}
+
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
-	relation.UUID = uuid
-	err := relation.Update(ms.Session)
+	err := ms.Neo4jDomain.Get(relation, "uid", vo.Uid)
 	if err != nil {
 		return err
 	}
-	return nil
+
+	relation.Name = vo.Name
+	relation.Source2Target = vo.Source2Target
+	relation.Target2Source = vo.Target2Source
+	relation.Direction = vo.Direction
+	relation.UpdateTime = time.Now().Unix()
+	relation.Editor = operator
+	return ms.Neo4jDomain.Update(relation)
 }
 
 func (ms *ModelService) DeleteRelationship(relation *store.RelationshipModel) error {

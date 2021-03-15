@@ -29,7 +29,7 @@ func Neo4jInit(host string, username string, password string) {
 	}
 
 	err := gogm.Init(config,
-		&ModelGroup{}, &Model{}, &AttributeGroup{}, &Attribute{},
+		&ModelGroup{}, &Model{}, &AttributeGroup{}, &Attribute{}, &ModelRelation{},
 		&Resource{}, &AttributeGroupIns{}, &AttributeIns{}, &RelationshipModel{},
 	)
 	if err != nil {

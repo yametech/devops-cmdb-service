@@ -9,6 +9,7 @@ import (
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -111,16 +112,18 @@ func (rs ResourceService) GetResourceListPageByMap(modelUid string, pageNumber i
 		if err != nil {
 			panic(err)
 		}
-		vo := &common.ResourceListPageVO{}
-		utils.SimpleConvert(vo, resource)
+		//vo := &common.ResourceListPageVO{}
+		//utils.SimpleConvert(vo, resource)
 		attributes := make(map[string]string)
 		for _, srcAttributeGroupIns := range resource.AttributeGroupIns {
 			for _, srcAttributeIns := range srcAttributeGroupIns.AttributeIns {
 				attributes[srcAttributeIns.Uid] = srcAttributeIns.AttributeInsValue
 			}
 		}
-		vo.Attributes = attributes
-		list = append(list, vo)
+		//vo.Attributes = attributes
+		attributes["id"] = strconv.FormatInt(resource.Id, 10)
+		attributes["uuid"] = resource.UUID
+		list = append(list, attributes)
 	}
 	pageResultVO.List = list
 	return pageResultVO
@@ -151,6 +154,7 @@ func (rs *ResourceService) DeleteResource(uuidArray []string) error {
 }
 
 func (rs *ResourceService) AddResource(body string, operator string) (interface{}, error) {
+	fmt.Println(body)
 	bodyObj := &store.Resource{}
 	err := json.Unmarshal([]byte(body), bodyObj)
 	if err != nil {

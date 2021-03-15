@@ -26,6 +26,10 @@ func (obj *Resource) AddAttributeGroupIns(target *AttributeGroupIns) {
 
 	for _, attributeGroupIns := range obj.AttributeGroupIns {
 		if attributeGroupIns.Uid == target.Uid {
+			// 需要把属性保留下来
+			for _, attributeIns := range target.AttributeIns {
+				attributeGroupIns.AddAttributeIns(attributeIns)
+			}
 			return
 		}
 	}

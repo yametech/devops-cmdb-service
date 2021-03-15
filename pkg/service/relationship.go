@@ -49,36 +49,44 @@ func (ms *RelationshipService) UpdateModelRelation(body string, operator string)
 	}
 
 	result, err := ms.GetModelRelationByUid(src.Uid)
-	if result != nil && len(result) == 0 && len(result[0]) == 0 && result[0][0] == nil {
+	if result == nil || len(result) == 0 || len(result[0]) == 0 && result[0][0] == nil {
 		return nil, errors.New("不存在该模型关系")
 	}
 
-	modelRelation := result[0][0].(*store.ModelRelation)
+	updateCypher := "MATCH (a:Model)-[r:Relation]-(b:Model) WHERE r.uid = $uid " +
+		"SET r.comment = $comment , r.updateTime = $updateTime , r.editor = $editor "
 
+	properties := map[string]interface{}{}
+	properties["uid"] = src.Uid
+	properties["comment"] = src.Comment
+	properties["editor"] = src.Editor
+	properties["updateTime"] = time.Now().Unix()
+	//
 	result, _ = ms.GetResourceRelationsByModelRelationUid(src.Uid)
-	//如果已有数据关联此模型，则只能更新描述备注
+	////如果已有数据关联此模型，则只能更新描述备注
 	if result == nil {
-		// 全部更新
-		modelRelation.RelationshipUid = src.RelationshipUid
-		modelRelation.TargetUid = src.TargetUid
-		modelRelation.SourceUid = src.SourceUid
-		modelRelation.Constraint = src.Constraint
+		//	// 全部更新
+		updateCypher += " , r.uid = $newUid , r.relationshipUid = $relationshipUid , r.targetUid = $targetUid , r.sourceUid = $sourceUid , r.constraint = $constraint"
+		properties["relationshipUid"] = src.RelationshipUid
+		properties["sourceUid"] = src.SourceUid
+		properties["targetUid"] = src.TargetUid
+		properties["constraint"] = src.Constraint
+		properties["newUid"] = src.SourceUid + "_" + src.RelationshipUid + "_" + src.TargetUid
 	}
 
-	modelRelation.Comment = src.Comment
-	modelRelation.Editor = operator
-	modelRelation.UpdateTime = time.Now().Unix()
-
-	err = ms.Neo4jDomain.Update(modelRelation)
+	//updateCypher := "match (a:Model)-[r:Relation]-(b:Model) where r.uid = '"+ +"' set r.comment = 123 "
+	//updateCypher += " RETURN r"
+	fmt.Println(updateCypher, properties)
+	result, err = ms.ManualExecute(updateCypher, properties)
 	if err != nil {
 		return nil, err
 	}
 
-	return modelRelation, nil
+	return result, nil
 }
 
 func parseToModelRelation(body string, operator string) (*store.ModelRelation, error) {
-	fmt.Println(body)
+	//fmt.Println(body)
 	bodyObj := &store.ModelRelation{}
 	err := json.Unmarshal([]byte(body), bodyObj)
 	if err != nil {
@@ -88,10 +96,11 @@ func parseToModelRelation(body string, operator string) (*store.ModelRelation, e
 	commonObj := &store.CommonObj{}
 	commonObj.InitCommonObj(operator)
 	relation := &store.ModelRelation{}
-	relation.RelationshipUid = bodyObj.RelationshipUid
-	relation.Constraint = bodyObj.Constraint
-	relation.SourceUid = bodyObj.SourceUid
-	relation.TargetUid = bodyObj.TargetUid
+	utils.SimpleConvert(relation, bodyObj)
+	//relation.RelationshipUid = bodyObj.RelationshipUid
+	//relation.Constraint = bodyObj.Constraint
+	//relation.SourceUid = bodyObj.SourceUid
+	//relation.TargetUid = bodyObj.TargetUid
 	relation.Comment = bodyObj.Comment
 	relation.CommonObj = *commonObj
 

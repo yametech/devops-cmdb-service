@@ -1,10 +1,12 @@
 package web
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/service"
+	"net/http"
 )
 
 type Server struct {
@@ -18,13 +20,13 @@ func filterMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 打印日志
 		//start := time.Now()
-		//rawData, _ := c.GetRawData()
-		//fmt.Printf("%v,  \"%v\",   %v  \n", c.Request.Method, c.Request.RequestURI, string(rawData))
+		rawData, _ := c.GetRawData()
+		fmt.Printf("%v,  \"%v\",   %v  \n", c.Request.Method, c.Request.RequestURI, string(rawData))
 
 		// 用户信息存储
 		//c.Set("user", "中间件")
-
-		//c.Next()
+		c.Set("body", string(rawData))
+		c.Next()
 		//end := time.Now()
 		//latency := end.Sub(start)
 		//fmt.Printf("%v,  \"%v\", 耗时：%v \n", c.Request.Method, c.Request.RequestURI, latency.String())
@@ -39,7 +41,7 @@ func NewServer(apiServer api.IApiServer) *Server {
 		ms,
 		as,
 	}
-	apiServer.GINEngine().Use(filterMiddleware())
+	//apiServer.GINEngine().Use(filterMiddleware())
 
 	groupRoute := apiServer.GINEngine().Group(common.WEB_API_GROUP)
 
@@ -69,7 +71,7 @@ func NewServer(apiServer api.IApiServer) *Server {
 
 	groupRoute.POST("/model/relationship-list", server.getAllRelationship)
 	groupRoute.POST("/model/relationship-add", server.createRelationship)
-	groupRoute.POST("/model/relationship-update", server.updateRelation)
+	groupRoute.POST("/model/relationship-update", server.updateRelationship)
 	groupRoute.POST("/model/relationship-delete", server.deleteRelationship)
 
 	// resource
@@ -84,11 +86,11 @@ func NewServer(apiServer api.IApiServer) *Server {
 }
 
 func Success(ctx *gin.Context, data interface{}) {
-	ctx.JSON(200, &common.ApiResponseVO{Data: data, Code: 200})
+	ctx.JSON(http.StatusOK, &common.ApiResponseVO{Data: data, Code: 200})
 }
 
 func Error(ctx *gin.Context, msg string) {
-	ctx.JSON(200, &common.ApiResponseVO{Msg: msg, Code: 400})
+	ctx.JSON(http.StatusBadRequest, &common.ApiResponseVO{Msg: msg, Code: 400})
 }
 
 func ResultHandle(ctx *gin.Context, result interface{}, err error) {

@@ -24,7 +24,7 @@ func (r *ResourceApi) router(e *gin.Engine) {
 	groupRoute.GET("/resource", r.getResourceListPage)
 	groupRoute.GET("/resource/:uuid", r.getResourceDetail)
 	groupRoute.POST("/resource", r.addResource)
-	groupRoute.DELETE("/resource/:uuids", r.deleteResource)
+	groupRoute.DELETE("/resource", r.deleteResource)
 	groupRoute.PUT("/resource-attribute/:uuid", r.updateResourceAttribute)
 }
 
@@ -93,8 +93,10 @@ func (r *ResourceApi) getResourceDetail(ctx *gin.Context) {
 }
 
 func (r *ResourceApi) deleteResource(ctx *gin.Context) {
-
-	err := r.resourceService.DeleteResource(strings.Split(ctx.Param("uuids"), ","))
+	rawData, _ := ctx.GetRawData()
+	dataMap := map[string]string{}
+	_ = json.Unmarshal(rawData, &dataMap)
+	err := r.resourceService.DeleteResource(strings.Split(dataMap["uuids"], ","))
 	if err != nil {
 		fmt.Printf("找不到记录,uuid:%v, msg:%v\n", ctx.Param("uuid"), err)
 		Error(ctx, err.Error())
