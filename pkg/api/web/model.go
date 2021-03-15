@@ -224,7 +224,7 @@ func (s *Server) getAllRelationship(ctx *gin.Context) {
 
 	returnData, err := s.ModelService.GetRelationshipList(limit, pageNumber)
 	if err != nil {
-		api.RequestErr(ctx, err)
+		api.RequestOK(ctx, "")
 		return
 	}
 	api.RequestOK(ctx, returnData)
