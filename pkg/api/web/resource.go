@@ -54,7 +54,8 @@ func (r *ResourceApi) addResource(ctx *gin.Context) {
 	rawData, _ := ctx.GetRawData()
 	result, err := r.resourceService.AddResource(string(rawData), "")
 	if err != nil {
-		panic(err)
+		Error(ctx, err.Error())
+		return
 	}
 	Success(ctx, result)
 }
