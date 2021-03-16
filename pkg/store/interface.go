@@ -20,7 +20,7 @@ type IStore interface {
 func Neo4jInit(host string, username string, password string) {
 	config := &gogm.Config{
 		IndexStrategy: gogm.VALIDATE_INDEX, //other options are ASSERT_INDEX and IGNORE_INDEX
-		PoolSize:      500,
+		PoolSize:      50,
 		Port:          7687,
 		IsCluster:     false, //tells it whether or not to use `bolt+routing`
 		Host:          host,

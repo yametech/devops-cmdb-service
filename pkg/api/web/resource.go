@@ -21,7 +21,7 @@ func (r *ResourceApi) router(e *gin.Engine) {
 	groupRoute.GET("/model-attribute/:uid", r.getModelAttribute)
 	groupRoute.PUT("/model-attribute/:uid", r.configModelAttribute)
 	groupRoute.GET("/model-info/:uid", r.getModelInfoForIns)
-	groupRoute.GET("/resource", r.getResourceListPage)
+	groupRoute.POST("/resource-list", r.getResourceListPage)
 	groupRoute.GET("/resource/:uuid", r.getResourceDetail)
 	groupRoute.POST("/resource", r.addResource)
 	groupRoute.DELETE("/resource", r.deleteResource)
@@ -64,13 +64,14 @@ func (r *ResourceApi) addResource(ctx *gin.Context) {
 func (r *ResourceApi) getResourceListPage(ctx *gin.Context) {
 	vo := &common.ResourceListPageParamVO{}
 
-	err := ctx.ShouldBindQuery(vo)
-	//err := ctx.ShouldBindJSON(vo)
+	//err := ctx.ShouldBindQuery(vo)
+	err := ctx.ShouldBindJSON(vo)
 	if err != nil {
 		println(err.Error())
 		Error(ctx, err.Error())
 		return
 	}
+	fmt.Printf("%v\n", vo)
 
 	if vo.QueryValue != "" {
 		Success(ctx, r.resourceService.GetResourceListPage(vo.ModelUid, vo.QueryValue, vo.Current, vo.PageSize))

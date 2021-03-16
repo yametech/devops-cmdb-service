@@ -1,9 +1,7 @@
 package store
 
 import (
-	"fmt"
 	"github.com/mindstand/gogm"
-	"time"
 )
 
 type ModelGroup struct {
@@ -14,7 +12,7 @@ type ModelGroup struct {
 	CommonObj
 }
 
-func (mg *ModelGroup) Save(session *gogm.Session) error {
+/*func (mg *ModelGroup) Save(session *gogm.Session) error {
 	mg.CreateTime = time.Now().Unix()
 	mg.UpdateTime = time.Now().Unix()
 	return session.Save(mg)
@@ -35,4 +33,4 @@ func (mg *ModelGroup) Get(session *gogm.Session, uuid string) error {
 
 func (mg *ModelGroup) Delete(session *gogm.Session) error {
 	return session.Delete(mg)
-}
+}*/

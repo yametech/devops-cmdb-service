@@ -101,7 +101,7 @@ func (s *Server) deleteAttributeGroup(ctx *gin.Context) {
 		return
 	}
 	uuid := fmt.Sprintf("%v", unstructured["uuid"])
-	err = s.AttributeService.DeleteAttributeGroupInstance(uuid)
+	err = s.AttributeService.DeleteAttributeGroup(uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -133,7 +133,7 @@ func (s *Server) getAttribute(ctx *gin.Context) {
 		return
 	}
 	uuid := fmt.Sprintf("%v", unstructured["uuid"])
-	attribute, err := s.AttributeService.GetAttributeInstance(uuid)
+	attribute, err := s.AttributeService.GetAttribute(uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -180,13 +180,13 @@ func (s *Server) putAttribute(ctx *gin.Context) {
 	}
 	uuid := fmt.Sprintf("%v", unstructured["uuid"])
 
-	err = s.AttributeService.UpdateAttributeInstance(rawData, uuid)
+	result, err := s.AttributeService.UpdateAttribute(rawData, uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
 
-	api.RequestOK(ctx, s.Attribute)
+	api.RequestOK(ctx, result)
 }
 
 func (s *Server) deleteAttribute(ctx *gin.Context) {

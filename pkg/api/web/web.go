@@ -34,12 +34,10 @@ func filterMiddleware() gin.HandlerFunc {
 }
 
 func NewServer(apiServer api.IApiServer) *Server {
-	//apiServer.GINEngine()
-	ms, as := api.NewService()
 	server := &Server{
 		apiServer,
-		ms,
-		as,
+		&service.ModelService{},
+		&service.AttributeService{},
 	}
 	//apiServer.GINEngine().Use(filterMiddleware())
 
@@ -78,9 +76,9 @@ func NewServer(apiServer api.IApiServer) *Server {
 	resource := &ResourceApi{&service.ResourceService{}}
 	resource.router(apiServer.GINEngine())
 
-	// relationship
-	relationship := &RelationshipApi{&service.RelationshipService{}}
-	relationship.router(apiServer.GINEngine())
+	// relation
+	relation := &RelationshipApi{&service.RelationService{}}
+	relation.router(apiServer.GINEngine())
 
 	return server
 }
@@ -90,7 +88,7 @@ func Success(ctx *gin.Context, data interface{}) {
 }
 
 func Error(ctx *gin.Context, msg string) {
-	ctx.JSON(http.StatusBadRequest, &common.ApiResponseVO{Msg: msg, Code: 400})
+	ctx.JSON(http.StatusOK, &common.ApiResponseVO{Msg: msg, Code: 400})
 }
 
 func ResultHandle(ctx *gin.Context, result interface{}, err error) {

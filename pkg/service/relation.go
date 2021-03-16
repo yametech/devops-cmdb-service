@@ -11,44 +11,78 @@ import (
 	"time"
 )
 
-type RelationshipService struct {
+type RelationService struct {
 	Service
 	store.Neo4jDomain
 }
 
-func (ms *RelationshipService) GetModelRelationList(uid string) interface{} {
-	session := store.GetSession(true)
-	query := "match (a:Model)-[r:Relation]-(b:Model) where a.uid = $modelUid or b.uid = $modelUid return distinct  r"
-	result, _ := session.QueryRaw(query, map[string]interface{}{"modelUid": uid})
+func (rs *RelationService) GetAllModelRelations() *[]common.ModelRelationVO {
+	query := "match (a:Model)-[r:Relation]-(b:Model) return distinct  r"
+	return queryModelRelations(query, nil)
+}
 
-	relations := make([]store.ModelRelation, 0)
+func queryModelRelations(query string, properties map[string]interface{}) *[]common.ModelRelationVO {
+	session := store.GetSession(true)
+	result, _ := session.QueryRaw(query, properties)
+
+	relations := make([]common.ModelRelationVO, 0)
 	for _, wrap := range result {
-		relationship := wrap[0].(*gogm.RelationshipWrap)
-		relation := &store.ModelRelation{}
-		utils.SimpleConvert(relation, relationship.Props)
+		relationshipWrap := wrap[0].(*gogm.RelationshipWrap)
+		relation := &common.ModelRelationVO{}
+		utils.SimpleConvert(relation, relationshipWrap.Props)
+		relation.Id = relationshipWrap.Id
+
+		if len(wrap) == 3 {
+			nodeWrap := wrap[1].(*gogm.NodeWrap)
+			if relation.SourceUid == nodeWrap.Props["uid"] {
+				relation.SourceName = nodeWrap.Props["name"].(string)
+				nodeWrap := wrap[2].(*gogm.NodeWrap)
+				relation.TargetName = nodeWrap.Props["name"].(string)
+			} else {
+				relation.TargetName = nodeWrap.Props["name"].(string)
+				nodeWrap := wrap[2].(*gogm.NodeWrap)
+				relation.SourceName = nodeWrap.Props["name"].(string)
+			}
+		}
 		relations = append(relations, *relation)
 	}
 
 	return &relations
 }
 
-func (ms RelationshipService) DeleteModelRelation(uid string) ([][]interface{}, error) {
-	result, _ := ms.GetResourceRelationsByModelRelationUid(uid)
+func (rs *RelationService) GetModelRelationList(uid string) interface{} {
+	query := "match (a:Model)-[r:Relation]-(b:Model) where a.uid = $modelUid or b.uid = $modelUid return distinct r, a, b"
+	result := queryModelRelations(query, map[string]interface{}{"modelUid": uid})
+	// 处理重复的
+	IdMap := map[int64]bool{}
+	relations := make([]common.ModelRelationVO, 0)
+	for _, vo := range *result {
+		if !IdMap[vo.Id] {
+			relations = append(relations, vo)
+			IdMap[vo.Id] = true
+		}
+	}
+
+	return relations
+}
+
+func (rs RelationService) DeleteModelRelation(uid string) ([][]interface{}, error) {
+	result, _ := rs.GetResourceRelationsByModelRelationUid(uid)
 	if result != nil {
 		return nil, errors.New("该模型已被使用，禁止删除")
 	}
 
 	query := "match (a:Model)-[r:Relation]-(b:Model) where r.uid = $uid delete  r"
-	return ms.ManualExecute(query, map[string]interface{}{"uid": uid})
+	return rs.ManualExecute(query, map[string]interface{}{"uid": uid})
 }
 
-func (ms *RelationshipService) UpdateModelRelation(body string, operator string) (interface{}, error) {
+func (rs *RelationService) UpdateModelRelation(body string, operator string) (interface{}, error) {
 	src, _ := parseToModelRelation(body, operator)
 	if src == nil || src.Uid == "" {
 		return nil, errors.New("更新模型关系缺少uid")
 	}
 
-	result, err := ms.GetModelRelationByUid(src.Uid)
+	result, err := rs.GetModelRelationByUid(src.Uid)
 	if result == nil || len(result) == 0 || len(result[0]) == 0 && result[0][0] == nil {
 		return nil, errors.New("不存在该模型关系")
 	}
@@ -62,7 +96,7 @@ func (ms *RelationshipService) UpdateModelRelation(body string, operator string)
 	properties["editor"] = src.Editor
 	properties["updateTime"] = time.Now().Unix()
 	//
-	result, _ = ms.GetResourceRelationsByModelRelationUid(src.Uid)
+	result, _ = rs.GetResourceRelationsByModelRelationUid(src.Uid)
 	////如果已有数据关联此模型，则只能更新描述备注
 	if result == nil {
 		//	// 全部更新
@@ -77,7 +111,7 @@ func (ms *RelationshipService) UpdateModelRelation(body string, operator string)
 	//updateCypher := "match (a:Model)-[r:Relation]-(b:Model) where r.uid = '"+ +"' set r.comment = 123 "
 	//updateCypher += " RETURN r"
 	fmt.Println(updateCypher, properties)
-	result, err = ms.ManualExecute(updateCypher, properties)
+	result, err = rs.ManualExecute(updateCypher, properties)
 	if err != nil {
 		return nil, err
 	}
@@ -107,38 +141,38 @@ func parseToModelRelation(body string, operator string) (*store.ModelRelation, e
 	return relation, nil
 }
 
-func (ms *RelationshipService) GetResourceRelationsByModelRelationUid(modelRelationUid string) ([][]interface{}, error) {
+func (rs *RelationService) GetResourceRelationsByModelRelationUid(modelRelationUid string) ([][]interface{}, error) {
 	query := "match (a:Resource)-[r:Relation]-(b:Resource) where r.uid = $uid return distinct  r"
-	return ms.ManualQueryRaw(query, map[string]interface{}{"uid": modelRelationUid})
+	return rs.ManualQueryRaw(query, map[string]interface{}{"uid": modelRelationUid})
 }
 
-func (ms *RelationshipService) GetModelRelationByUid(uid string) ([][]interface{}, error) {
+func (rs *RelationService) GetModelRelationByUid(uid string) ([][]interface{}, error) {
 	query := "match (a:Model)-[r:Relation]-(b:Model) where r.uid = $uid return distinct  r"
-	return ms.ManualQueryRaw(query, map[string]interface{}{"uid": uid})
+	return rs.ManualQueryRaw(query, map[string]interface{}{"uid": uid})
 }
 
-func (ms *RelationshipService) AddModelRelation(body string, operator string) (interface{}, error) {
+func (rs *RelationService) AddModelRelation(body string, operator string) (interface{}, error) {
 	relation, err := parseToModelRelation(body, operator)
 	if err != nil {
 		return nil, err
 	}
 	relation.Uid = relation.SourceUid + "_" + relation.RelationshipUid + "_" + relation.TargetUid
 
-	result, err := ms.GetModelRelationByUid(relation.Uid)
+	result, err := rs.GetModelRelationByUid(relation.Uid)
 	if result != nil {
 		return nil, errors.New("已存在该模型关系")
 	}
 
 	query := "MATCH (a:Model), (b:Model) WHERE a.uid = $sourceUid AND b.uid = $targetUid " +
 		"CREATE (a)-[:Relation {uid: $uid, relationshipUid: $relationshipUid, constraint: $constraint, sourceUid: $sourceUid, targetUid: $targetUid, comment: $comment }]->(b)"
-	result, err = ms.ManualExecute(query, map[string]interface{}{"sourceUid": relation.SourceUid, "targetUid": relation.TargetUid,
+	result, err = rs.ManualExecute(query, map[string]interface{}{"sourceUid": relation.SourceUid, "targetUid": relation.TargetUid,
 		"uid": relation.Uid, "relationshipUid": relation.RelationshipUid, "constraint": relation.Constraint, "comment": relation.Comment})
 	return result, err
 }
 
-func (ms RelationshipService) GetResourceRelationList(uuid string) (interface{}, error) {
+func (rs RelationService) GetResourceRelationList(uuid string) (interface{}, error) {
 	query := "match (a:Resource)-[r:Relation]-(b:Resource) where a.uuid = $uuid return a,r,b"
-	result, err := ms.ManualQueryRaw(query, map[string]interface{}{"uuid": uuid})
+	result, err := rs.ManualQueryRaw(query, map[string]interface{}{"uuid": uuid})
 	printOut(result)
 
 	voList := &[]common.ResourceRelationListPageVO{}
@@ -225,24 +259,24 @@ func convert2ResourceRelationListPageVO(row []interface{}, uuid string) *common.
 	return vo
 }
 
-func (ms RelationshipService) DeleteResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
+func (rs RelationService) DeleteResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
 	query := "match (a:Resource)-[r:Relation]-(b:Resource) where r.uid = $uid and a.uuid = $sourceUid and b.uuid = $targetUid delete  r"
-	return ms.ManualExecute(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
+	return rs.ManualExecute(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
 }
 
-func (ms RelationshipService) AddResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
-	result, err := ms.GetResourceRelation(sourceUUID, targetUUID, uid)
+func (rs RelationService) AddResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
+	result, err := rs.GetResourceRelation(sourceUUID, targetUUID, uid)
 	if result != nil {
 		return nil, errors.New("已存在该资源关系")
 	}
 
 	query := "MATCH (a:Resource), (b:Resource) WHERE a.uuid = $sourceUUID AND b.uuid= $targetUUID " +
 		"CREATE (a)-[:Relation {uid: $uid}]->(b)"
-	result, err = ms.ManualExecute(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
+	result, err = rs.ManualExecute(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
 	return result, err
 }
 
-func (ms RelationshipService) GetResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
+func (rs RelationService) GetResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
 	query := "match (a:Resource)-[r:Relation]-(b:Resource) where r.uid = $uid and a.uuid = $sourceUUID and b.uuid = $targetUUID return distinct  r"
-	return ms.ManualQueryRaw(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
+	return rs.ManualQueryRaw(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
 }

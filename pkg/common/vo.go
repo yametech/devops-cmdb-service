@@ -58,7 +58,7 @@ type UpdateModelRelationVO struct {
 type ResourceListPageParamVO struct {
 	PageSize   int                `form:"pageSize" json:"pageSize" binding:"required,gte=0"`
 	Current    int                `form:"current" json:"current" binding:"required,gte=0"`
-	ModelUid   string             `form:"model_uid" json:"modelUid" binding:"required"`
+	ModelUid   string             `form:"modelUid" json:"modelUid" binding:"required"`
 	QueryValue string             `json:"queryValue" binding:""`
 	QueryMap   *map[string]string `json:"queryMap" binding:""`
 }
@@ -75,4 +75,23 @@ type RelationshipModelUpdateVO struct {
 	Source2Target string `json:"source2Target" form:"source2Target" binding:"required"`
 	Target2Source string `json:"target2Source" form:"target2Source" binding:"required"`
 	Direction     string `json:"direction" form:"direction" binding:"required"`
+}
+
+type ModelRelationVO struct {
+	Id               int64       `json:"id"`
+	UUID             string      `json:"uuid"`
+	Uid              string      `json:"uid"`
+	RelationshipUid  string      `json:"relationshipUid"`
+	RelationshipName string      `json:"relationshipName"`
+	Constraint       string      `json:"constraint"`
+	SourceUid        string      `json:"sourceUid"`
+	SourceName       string      `json:"sourceName"`
+	TargetUid        string      `json:"targetUid"`
+	TargetName       string      `json:"targetName"`
+	Comment          interface{} `json:"comment"`
+}
+
+type IdVO struct {
+	Uid  string `json:"uid"`
+	UUID string `json:"uuid"`
 }

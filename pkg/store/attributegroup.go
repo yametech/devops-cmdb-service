@@ -1,9 +1,7 @@
 package store
 
 import (
-	"fmt"
 	"github.com/mindstand/gogm"
-	"time"
 )
 
 type AttributeGroup struct {
@@ -16,7 +14,7 @@ type AttributeGroup struct {
 	CommonObj
 }
 
-func (m *AttributeGroup) Get(session *gogm.Session, uuid string) error {
+/*func (m *AttributeGroup) Get(session *gogm.Session, uuid string) error {
 	query := fmt.Sprintf("match (a:AttributeGroup) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
 		"uuid": uuid,
@@ -69,3 +67,4 @@ func (ag *AttributeGroup) Update(session *gogm.Session) error {
 func (ag *AttributeGroup) Delete(session *gogm.Session) error {
 	return session.Delete(ag)
 }
+*/

@@ -1,8 +1,8 @@
 package service
 
 import (
+	"errors"
 	"fmt"
-	"github.com/mindstand/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"strconv"
@@ -11,116 +11,52 @@ import (
 )
 
 type ModelService struct {
-	Model      store.Model
-	ModelGroup store.ModelGroup
-	Session    *gogm.Session
+	Service
 	store.Neo4jDomain
 	mutex sync.Mutex
 }
 
-func (ms *ModelService) CheckExists(modelType, uuid string) bool {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
-	switch modelType {
-	case "model":
-		model := store.Model{}
-		err := model.Get(ms.Session, uuid)
-		if err != nil {
-			return false
-		}
-		return true
-	case "modelGroup":
-		modelGroup := store.ModelGroup{}
-		err := modelGroup.Get(ms.Session, uuid)
-		if err != nil {
-			return false
-		}
-		return true
-	}
-	return false
-}
-
 func (ms *ModelService) ChangeModelGroup(model *store.Model, uuid string) error {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
-	modelGroup := store.ModelGroup{}
-	if err := modelGroup.Get(ms.Session, uuid); err != nil {
+	modelGroup := &store.ModelGroup{}
+	if err := ms.Neo4jDomain.Get(modelGroup, "uuid", uuid); err != nil {
 		return err
 	}
+
 	query := fmt.Sprintf("match (a:Model)-[r:GroupBy]->(b:ModelGroup)where a.uuid=$uuid delete r")
 	properties := map[string]interface{}{
 		"uuid": model.UUID,
 	}
 	_ = store.GetSession(false).Query(query, properties, nil)
-	model.ModelGroup = &modelGroup
-	if err := model.Save(ms.Session); err != nil {
+	model.ModelGroup = modelGroup
+	if err := ms.Neo4jDomain.Update(model); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ms *ModelService) CleanModelGroup(uuid string) error {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
-	if err := ms.ModelGroup.Get(ms.Session, uuid); err != nil {
-		return err
-	}
-	ms.Model.ModelGroup = &ms.ModelGroup
-	if err := ms.Model.Save(ms.Session); err != nil {
-		return err
-	}
-	return nil
+func (ms *ModelService) GetAllGroup() (*[]store.ModelGroup, error) {
+	modelGroups := make([]store.ModelGroup, 0)
+	err := ms.Neo4jDomain.List(&modelGroups)
+	return &modelGroups, err
 }
 
-func (ms *ModelService) GetGroupList(limit, pageNumber string) (*[]store.ModelGroup, error) {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
-	limitInt, err := strconv.Atoi(limit)
-	if err != nil || limitInt < 0 {
-		return nil, err
-	}
-	pageNumberInt, err := strconv.Atoi(pageNumber)
-	if err != nil || pageNumberInt < 0 {
-		return nil, err
-	}
-	allMG := make([]store.ModelGroup, 0)
-	query := fmt.Sprintf("match (a:ModelGroup) return a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit")
-	properties := map[string]interface{}{
-		"skip":  (pageNumberInt - 1) * limitInt,
-		"limit": limitInt,
-	}
-	err = ms.Session.Query(query, properties, &allMG)
-	//if err != nil {
-	//	return nil, err
-	//}
-	for i, v := range allMG {
-		models, err := ms.Model.LoadAll(ms.Session, v.UUID)
-		if err != nil {
-			return nil, err
-		}
-		allMG[i].Models = models
-	}
-	return &allMG, nil
-}
-
-func (ms *ModelService) GetModelGroupInstance(uuid string) (*store.ModelGroup, error) {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
+func (ms *ModelService) GetModelGroup(uuid string) (*store.ModelGroup, error) {
 	modelGroup := &store.ModelGroup{}
-	if err := modelGroup.Get(ms.Session, uuid); err != nil {
+	if err := ms.Neo4jDomain.Get(modelGroup, "uuid", uuid); err != nil {
 		return nil, err
 	}
-	models, err := ms.Model.LoadAll(ms.Session, modelGroup.UUID)
-	if err != nil {
-		return nil, err
-	}
-	modelGroup.Models = models
 	return modelGroup, nil
 }
 
+func (ms *ModelService) CreateModelGroup(model *store.ModelGroup) error {
+	return ms.Neo4jDomain.Save(model)
+}
+
+func (ms *ModelService) CreateModel(model *store.Model) error {
+	return ms.Neo4jDomain.Save(model)
+}
+
 func (ms *ModelService) GetModelList(limit string, pageNumber string) (*[]store.Model, error) {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
 	limitInt, err := strconv.Atoi(limit)
 	if err != nil || limitInt < 0 {
 		return nil, err
@@ -142,66 +78,46 @@ func (ms *ModelService) GetModelList(limit string, pageNumber string) (*[]store.
 }
 
 func (ms *ModelService) GetModelInstance(uuid string) (*store.Model, error) {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
 	model := &store.Model{}
-	if err := model.Get(ms.Session, uuid); err != nil {
-		return nil, err
-	}
-	agInstance := &store.AttributeGroup{}
-	attributeInstance := &store.Attribute{}
-	attributeGroup, err := agInstance.LoadAll(ms.Session, model.UUID)
-	if err != nil {
-		return model, nil
-	}
-	for i, _ := range attributeGroup {
-		attribute, err := attributeInstance.LoadAll(ms.Session, attributeGroup[i].UUID)
-		if err != nil {
-			continue
-		}
-		attributeGroup[i].Attributes = *attribute
-	}
-	model.AttributeGroups = attributeGroup
-	return model, nil
+	err := store.GetSession(true).Load(model, uuid)
+	return model, err
 }
 
-func (ms *ModelService) GetRelationshipList(limit string, pageNumber string) (*[]store.RelationshipModel, error) {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
-	limitInt, err := strconv.Atoi(limit)
-	if err != nil || limitInt < 0 {
-		return nil, err
-	}
-	pageNumberInt, err := strconv.Atoi(pageNumber)
-	if err != nil || pageNumberInt < 0 {
-		return nil, err
-	}
+func (ms *ModelService) GetRelationshipList(pageSize, pageNumber int) (*[]store.RelationshipModel, error) {
 	allModel := make([]store.RelationshipModel, 0)
 	query := fmt.Sprintf("match (a:RelationshipModel) return a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit")
 	properties := map[string]interface{}{
-		"skip":  (pageNumberInt - 1) * limitInt,
-		"limit": limitInt,
+		"skip":  (pageNumber - 1) * pageSize,
+		"limit": pageSize,
 	}
 	if err := store.GetSession(true).Query(query, properties, &allModel); err != nil {
-		//return nil, err
-	}
-	return &allModel, err
-}
-
-func (ms *ModelService) GetRelationshipInstance(uuid string) (*store.RelationshipModel, error) {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
-	relation := &store.RelationshipModel{}
-	if err := relation.Get(ms.Session, uuid); err != nil {
 		return nil, err
 	}
-	return relation, nil
+	// get all ModelRelation, count the Relationship usage
+	relationService := RelationService{}
+	relations := relationService.GetAllModelRelations()
+	for _, model := range allModel {
+		for _, relation := range *relations {
+			if relation.RelationshipUid == model.Uid {
+				model.Usage += 1
+			}
+		}
+	}
+
+	return &allModel, nil
+}
+
+func (ms *ModelService) GetRelationship(uuid string) (*store.RelationshipModel, error) {
+	relationship := &store.RelationshipModel{}
+	if err := ms.Neo4jDomain.Get(relationship, "uuid", uuid); err != nil {
+		return nil, err
+	}
+	return relationship, nil
 }
 
 func (ms *ModelService) SaveRelationship(relation *store.RelationshipModel) error {
-	ms.mutex.Lock()
-	defer ms.mutex.Unlock()
-	err := relation.Save(ms.Session)
+
+	err := ms.Neo4jDomain.Save(relation)
 	if err != nil {
 		return err
 	}
@@ -227,12 +143,22 @@ func (ms *ModelService) UpdateRelationship(vo *common.RelationshipModelUpdateVO,
 	return ms.Neo4jDomain.Update(relation)
 }
 
-func (ms *ModelService) DeleteRelationship(relation *store.RelationshipModel) error {
+func (ms *ModelService) DeleteRelationship(uuid string) error {
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
-	err := relation.Delete(ms.Session)
+
+	relationshipModel := &store.RelationshipModel{}
+	err := ms.Neo4jDomain.Get(relationshipModel, "uuid", uuid)
 	if err != nil {
 		return err
 	}
-	return nil
+	// if the Relationship has been used, deny operation
+	relationService := RelationService{}
+	relations := relationService.GetAllModelRelations()
+	for _, relation := range *relations {
+		if relation.RelationshipUid == relationshipModel.Uid {
+			return errors.New("该关系模型已被使用，禁止删除")
+		}
+	}
+	return ms.Neo4jDomain.Delete(relationshipModel)
 }

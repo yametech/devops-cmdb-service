@@ -1,9 +1,7 @@
 package store
 
 import (
-	"fmt"
 	"github.com/mindstand/gogm"
-	"strings"
 	"time"
 )
 
@@ -26,6 +24,7 @@ type RelationshipModel struct {
 	Target2Source string `json:"target2Source" gogm:"name=target2Source"`
 	// direction 方向：源指向目标，无方向，双方向
 	Direction string `json:"direction" gogm:"name=direction"`
+	Usage     int    `json:"usage" gogm:"name=usage"`
 	CommonObj
 }
 
@@ -99,7 +98,7 @@ func (m *Model) AddAttributeGroup(target *AttributeGroup) {
 	m.AttributeGroups = append(m.AttributeGroups, target)
 }
 
-func (m *Model) Get(session *gogm.Session, uuid string) error {
+/*func (m *Model) Get(session *gogm.Session, uuid string) error {
 	query := fmt.Sprintf("match (a:Model) where a.uuid = $uuid return a")
 	properties := map[string]interface{}{
 		"uuid": uuid,
@@ -138,7 +137,7 @@ func (m *Model) Update(session *gogm.Session) error {
 
 func (m *Model) Delete(session *gogm.Session) error {
 	return session.Delete(m)
-}
+}*/
 
 func (m *Model) GetAttributeGroupByUid(uid string) *AttributeGroup {
 	for _, group := range m.AttributeGroups {
@@ -158,28 +157,4 @@ func (m *AttributeGroup) GetAttributeByUid(uid string) *Attribute {
 	}
 
 	return nil
-}
-
-func (m *RelationshipModel) Get(session *gogm.Session, uuid string) error {
-	query := fmt.Sprintf("match (a:RelationshipModel) where a.uuid = $uuid return a")
-	properties := map[string]interface{}{
-		"uuid": uuid,
-	}
-
-	return session.Query(query, properties, m)
-}
-
-func (m *RelationshipModel) Save(session *gogm.Session) error {
-	m.CreateTime = time.Now().Unix()
-	m.UpdateTime = time.Now().Unix()
-	return session.Save(m)
-}
-
-func (m *RelationshipModel) Update(session *gogm.Session) error {
-	m.UpdateTime = time.Now().Unix()
-	return session.Save(m)
-}
-
-func (m *RelationshipModel) Delete(session *gogm.Session) error {
-	return session.Delete(m)
 }

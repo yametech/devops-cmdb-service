@@ -1,9 +1,7 @@
 package store
 
 import (
-	"fmt"
 	"github.com/mindstand/gogm"
-	"time"
 )
 
 type AttributeCommon struct {
@@ -49,7 +47,7 @@ type Attribute struct {
 	CommonObj
 }
 
-func (a *Attribute) LoadAll(session *gogm.Session, groupId string) (*[]*Attribute, error) {
+/*func (a *Attribute) LoadAll(session *gogm.Session, groupId string) (*[]*Attribute, error) {
 	aList := make([]*Attribute, 0)
 	query := fmt.Sprintf("match (a:Attribute)-[r:GroupBy]->(b:AttributeGroup) where b.uuid=$uuid return a")
 	properties := map[string]interface{}{
@@ -93,3 +91,4 @@ func (obj *Attribute) List(field string, value interface{}) interface{} {
 	_ = GetSession(true).Query(query, properties, result)
 	return result
 }
+*/

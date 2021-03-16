@@ -9,12 +9,11 @@ import (
 	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
+	"strconv"
 )
 
 func (s *Server) getAllGroup(ctx *gin.Context) {
-	limit := ctx.DefaultQuery("page_size", "10")
-	pageNumber := ctx.DefaultQuery("page_number", "1")
-	allMG, err := s.ModelService.GetGroupList(limit, pageNumber)
+	allMG, err := s.ModelService.GetAllGroup()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -29,7 +28,7 @@ func (s *Server) getGroup(ctx *gin.Context) {
 		return
 	}
 
-	modelGroup, err := s.ModelService.GetModelGroupInstance(unstructured["uuid"])
+	modelGroup, err := s.ModelService.GetModelGroup(unstructured["uuid"])
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -48,7 +47,8 @@ func (s *Server) createGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	err = modelGroup.Save(s.ModelService.Session)
+
+	err = s.ModelService.Neo4jDomain.Save(modelGroup)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -69,17 +69,18 @@ func (s *Server) putGroup(ctx *gin.Context) {
 	}
 	uuid := fmt.Sprintf("%v", unstructured["uuid"])
 
-	if exists := s.ModelService.CheckExists("modelGroup", uuid); exists != true {
-		api.RequestErr(ctx, fmt.Errorf("group not exists"))
+	modelGroup := &store.ModelGroup{}
+	if err := s.ModelService.Neo4jDomain.Get(modelGroup, "uuid", uuid); err != nil {
+		api.RequestErr(ctx, err)
 		return
 	}
-	modelGroup := store.ModelGroup{}
-	if err := json.Unmarshal(rawData, &modelGroup); err != nil {
+
+	if err := json.Unmarshal(rawData, modelGroup); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
 	modelGroup.UUID = uuid
-	err = modelGroup.Update(s.ModelService.Session)
+	err = s.ModelService.Neo4jDomain.Update(modelGroup)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -88,21 +89,6 @@ func (s *Server) putGroup(ctx *gin.Context) {
 }
 
 func (s *Server) deleteGroup(ctx *gin.Context) {
-	unstructured := make(map[string]string)
-	if err := ctx.BindJSON(&unstructured); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	modelGroup, err := s.ModelService.GetModelGroupInstance(unstructured["uuid"])
-	if err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	err = modelGroup.Delete(s.ModelService.Session)
-	if err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
 	api.RequestOK(ctx, "")
 }
 
@@ -146,14 +132,17 @@ func (s *Server) createModel(ctx *gin.Context) {
 		return
 	}
 
-	model := &store.Model{}
-	modelGroupUuid := fmt.Sprintf("%v", vo.ModelGroupUUID)
-	if !s.ModelService.CheckExists("modelGroup", modelGroupUuid) {
-		api.RequestErr(ctx, errors.New("groupUUID not exists"))
+	modelGroup := &store.ModelGroup{}
+	if err := s.ModelService.Neo4jDomain.Get(modelGroup, "uuid", vo.ModelGroupUUID); err != nil {
+		api.RequestErr(ctx, err)
 		return
 	}
+
+	model := &store.Model{}
 	utils.SimpleConvert(model, vo)
-	err = s.ModelService.ChangeModelGroup(model, modelGroupUuid)
+
+	model.ModelGroup = modelGroup
+	err = s.ModelService.Neo4jDomain.Save(model)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -173,29 +162,23 @@ func (s *Server) putModel(ctx *gin.Context) {
 		return
 	}
 
-	if !s.ModelService.CheckExists("model", unstructured["uuid"]) {
-		api.RequestErr(ctx, fmt.Errorf("get origin model error"))
+	model := &store.Model{}
+	if err := s.ModelService.Neo4jDomain.Get(model, "uuid", unstructured["uuid"]); err != nil {
+		api.RequestErr(ctx, err)
 		return
 	}
 
-	model := store.Model{}
-	if err := json.Unmarshal(rawData, &model); err != nil {
+	if err := json.Unmarshal(rawData, model); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
 	model.UUID = unstructured["uuid"]
-
-	modelGroupUuid := fmt.Sprintf("%v", unstructured["modelgroup"])
-	if exists := s.ModelService.CheckExists("modelGroup", modelGroupUuid); exists != true {
-		api.RequestErr(ctx, fmt.Errorf("modelgroup not exists"))
-		return
-	}
-	if err := s.ModelService.ChangeModelGroup(&model, modelGroupUuid); err != nil {
+	if err := s.ModelService.Neo4jDomain.Update(model); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
 
-	api.RequestOK(ctx, s.Model)
+	api.RequestOK(ctx, model)
 }
 
 func (s *Server) deleteModel(ctx *gin.Context) {
@@ -205,12 +188,13 @@ func (s *Server) deleteModel(ctx *gin.Context) {
 		return
 	}
 
-	model, err := s.ModelService.GetModelInstance(unstructured["uuid"])
-	if err != nil {
-		api.RequestErr(ctx, fmt.Errorf("get model fail"))
+	model := &store.Model{}
+	if err := s.ModelService.Neo4jDomain.Get(model, "uuid", unstructured["uuid"]); err != nil {
+		api.RequestErr(ctx, err)
 		return
 	}
-	err = model.Delete(s.ModelService.Session)
+
+	err := s.ModelService.Neo4jDomain.Delete(model)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -221,9 +205,18 @@ func (s *Server) deleteModel(ctx *gin.Context) {
 func (s *Server) getAllRelationship(ctx *gin.Context) {
 	limit := ctx.DefaultQuery("page_size", "10")
 	pageNumber := ctx.DefaultQuery("page_number", "1")
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil || limitInt < 0 {
+		api.RequestErr(ctx, errors.New("page_size参数不能小于0"))
+	}
+	pageNumberInt, err := strconv.Atoi(pageNumber)
+	if err != nil || pageNumberInt < 0 {
+		api.RequestErr(ctx, errors.New("page_number"))
+	}
 
-	returnData, err := s.ModelService.GetRelationshipList(limit, pageNumber)
+	returnData, err := s.ModelService.GetRelationshipList(limitInt, pageNumberInt)
 	if err != nil {
+		fmt.Println(err)
 		api.RequestOK(ctx, "")
 		return
 	}
@@ -266,18 +259,15 @@ func (s *Server) updateRelationship(ctx *gin.Context) {
 }
 
 func (s *Server) deleteRelationship(ctx *gin.Context) {
-	unstructured := make(map[string]string)
-	if err := ctx.BindJSON(&unstructured); err != nil {
-		api.RequestErr(ctx, err)
+	idVO := &common.IdVO{}
+	if _ = ctx.BindJSON(idVO); idVO.UUID == "" {
+		api.RequestErr(ctx, errors.New("uuid参数不能为空"))
 		return
 	}
-	relation, err := s.ModelService.GetRelationshipInstance(unstructured["uuid"])
+
+	err := s.ModelService.DeleteRelationship(idVO.UUID)
 	if err != nil {
-		api.RequestErr(ctx, fmt.Errorf("get modelRelation fail"))
-		return
-	}
-	if err := s.ModelService.DeleteRelationship(relation); err != nil {
-		api.RequestErr(ctx, fmt.Errorf("delete modelRelation fail"))
+		api.RequestErr(ctx, err)
 		return
 	}
 	api.RequestOK(ctx, "")
