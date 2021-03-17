@@ -46,7 +46,12 @@ func GetSession(readonly bool) *gogm.Session {
 	}
 
 	//close the session
-	defer sess.Close()
+	defer func() {
+		if e := sess.Close(); e != nil {
+			fmt.Println("close the session err：", e)
+		}
+		fmt.Println("close the session finished")
+	}()
 
 	return sess
 }

@@ -42,7 +42,7 @@ func (s *Server) createGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-	modelGroup := store.ModelGroup{}
+	modelGroup := &store.ModelGroup{}
 	if err := json.Unmarshal(rawData, &modelGroup); err != nil {
 		api.RequestErr(ctx, err)
 		return
