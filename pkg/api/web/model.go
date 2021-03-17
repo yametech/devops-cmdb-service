@@ -8,12 +8,12 @@ import (
 	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
-	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"strconv"
+	"strings"
 )
 
 func (s *Server) getAllGroup(ctx *gin.Context) {
-	allMG, err := s.ModelService.GetAllGroup()
+	allMG, err := s.ModelService.GetAllModelGroup()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -37,58 +37,40 @@ func (s *Server) getGroup(ctx *gin.Context) {
 }
 
 func (s *Server) createGroup(ctx *gin.Context) {
-	rawData, err := ctx.GetRawData()
-	if err != nil {
+	modelGroupVO := &common.AddModelGroupVO{}
+	if err := ctx.ShouldBindJSON(modelGroupVO); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	modelGroup := &store.ModelGroup{}
-	if err := json.Unmarshal(rawData, &modelGroup); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
+	modelGroupVO.Uid = strings.TrimSpace(modelGroupVO.Uid)
+	modelGroupVO.Name = strings.TrimSpace(modelGroupVO.Name)
 
-	err = s.ModelService.Neo4jDomain.Save(modelGroup)
+	result, err := s.ModelService.CreateModelGroup(modelGroupVO, "")
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	api.RequestOK(ctx, modelGroup)
+	api.RequestOK(ctx, result)
 }
 
 func (s *Server) putGroup(ctx *gin.Context) {
-	rawData, err := ctx.GetRawData()
+	modelGroupVO := &common.AddModelGroupVO{}
+	if err := ctx.ShouldBindJSON(modelGroupVO); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	modelGroupVO.Name = strings.TrimSpace(modelGroupVO.Name)
+
+	result, err := s.ModelService.UpdateModelGroup(modelGroupVO, "")
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	unstructured := make(map[string]interface{})
-	if err := json.Unmarshal(rawData, &unstructured); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	uuid := fmt.Sprintf("%v", unstructured["uuid"])
-
-	modelGroup := &store.ModelGroup{}
-	if err := s.ModelService.Neo4jDomain.Get(modelGroup, "uuid", uuid); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-
-	if err := json.Unmarshal(rawData, modelGroup); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	modelGroup.UUID = uuid
-	err = s.ModelService.Neo4jDomain.Update(modelGroup)
-	if err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	api.RequestOK(ctx, modelGroup)
+	api.RequestOK(ctx, result)
 }
 
 func (s *Server) deleteGroup(ctx *gin.Context) {
+	// TODO
 	api.RequestOK(ctx, "")
 }
 
@@ -116,7 +98,7 @@ func (s *Server) getModel(ctx *gin.Context) {
 		return
 	}
 
-	model, err := s.ModelService.GetModelInstance(data["uuid"])
+	model, err := s.ModelService.GetModel(data["uuid"])
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -126,75 +108,34 @@ func (s *Server) getModel(ctx *gin.Context) {
 
 func (s *Server) createModel(ctx *gin.Context) {
 	vo := &common.AddModelVO{}
-	err := ctx.BindJSON(vo)
+	if err := ctx.ShouldBindJSON(vo); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	vo.Uid = strings.TrimSpace(vo.Uid)
+	vo.Name = strings.TrimSpace(vo.Name)
+
+	result, err := s.ModelService.CreateModel(vo, "")
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-
-	modelGroup := &store.ModelGroup{}
-	if err := s.ModelService.Neo4jDomain.Get(modelGroup, "uuid", vo.ModelGroupUUID); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-
-	model := &store.Model{}
-	utils.SimpleConvert(model, vo)
-
-	model.ModelGroup = modelGroup
-	err = s.ModelService.Neo4jDomain.Save(model)
-	if err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	api.RequestOK(ctx, model)
+	api.RequestOK(ctx, result)
 }
 
 func (s *Server) putModel(ctx *gin.Context) {
-	rawData, err := ctx.GetRawData()
-	if err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	unstructured := make(map[string]string)
-	if err := ctx.BindJSON(&unstructured); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-
-	model := &store.Model{}
-	if err := s.ModelService.Neo4jDomain.Get(model, "uuid", unstructured["uuid"]); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-
-	if err := json.Unmarshal(rawData, model); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	model.UUID = unstructured["uuid"]
-	if err := s.ModelService.Neo4jDomain.Update(model); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-
-	api.RequestOK(ctx, model)
+	// TODO
+	api.RequestOK(ctx, "")
 }
 
 func (s *Server) deleteModel(ctx *gin.Context) {
-	unstructured := make(map[string]string)
-	if err := ctx.BindJSON(&unstructured); err != nil {
-		api.RequestErr(ctx, err)
+	idVO := &common.IdVO{}
+	if err := ctx.ShouldBindJSON(idVO); err != nil || idVO.UUID == "" {
+		api.RequestErr(ctx, errors.New("参数异常"))
 		return
 	}
 
-	model := &store.Model{}
-	if err := s.ModelService.Neo4jDomain.Get(model, "uuid", unstructured["uuid"]); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-
-	err := s.ModelService.Neo4jDomain.Delete(model)
+	err := s.ModelService.DeleteModel(idVO.UUID, "")
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -217,7 +158,7 @@ func (s *Server) getAllRelationship(ctx *gin.Context) {
 	returnData, err := s.ModelService.GetRelationshipList(limitInt, pageNumberInt)
 	if err != nil {
 		fmt.Println(err)
-		api.RequestOK(ctx, "")
+		api.RequestOK(ctx, []map[string]string{})
 		return
 	}
 	api.RequestOK(ctx, returnData)

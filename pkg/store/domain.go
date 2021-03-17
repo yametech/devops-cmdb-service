@@ -98,47 +98,6 @@ func (m *Model) AddAttributeGroup(target *AttributeGroup) {
 	m.AttributeGroups = append(m.AttributeGroups, target)
 }
 
-/*func (m *Model) Get(session *gogm.Session, uuid string) error {
-	query := fmt.Sprintf("match (a:Model) where a.uuid = $uuid return a")
-	properties := map[string]interface{}{
-		"uuid": uuid,
-	}
-
-	return session.Query(query, properties, m)
-}
-
-func (m *Model) LoadAll(session *gogm.Session, groupId string) ([]*Model, error) {
-	mList := make([]*Model, 0)
-	query := fmt.Sprintf("match (a:Model)-[r:GroupBy]->(b:ModelGroup)where b.uuid=$uuid return a")
-	properties := map[string]interface{}{
-		"uuid": groupId,
-	}
-	err := session.Query(query, properties, &mList)
-
-	if err != nil {
-		if strings.Contains(err.Error(), "data not found") {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return mList, nil
-}
-
-func (m *Model) Save(session *gogm.Session) error {
-	m.CreateTime = time.Now().Unix()
-	m.UpdateTime = time.Now().Unix()
-	return session.Save(m)
-}
-
-func (m *Model) Update(session *gogm.Session) error {
-	m.UpdateTime = time.Now().Unix()
-	return session.Save(m)
-}
-
-func (m *Model) Delete(session *gogm.Session) error {
-	return session.Delete(m)
-}*/
-
 func (m *Model) GetAttributeGroupByUid(uid string) *AttributeGroup {
 	for _, group := range m.AttributeGroups {
 		if group.Uid == uid {

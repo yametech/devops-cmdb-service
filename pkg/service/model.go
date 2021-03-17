@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
+	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"strconv"
 	"sync"
 	"time"
@@ -16,27 +17,9 @@ type ModelService struct {
 	mutex sync.Mutex
 }
 
-func (ms *ModelService) ChangeModelGroup(model *store.Model, uuid string) error {
-	modelGroup := &store.ModelGroup{}
-	if err := ms.Neo4jDomain.Get(modelGroup, "uuid", uuid); err != nil {
-		return err
-	}
-
-	query := fmt.Sprintf("match (a:Model)-[r:GroupBy]->(b:ModelGroup)where a.uuid=$uuid delete r")
-	properties := map[string]interface{}{
-		"uuid": model.UUID,
-	}
-	_ = store.GetSession(false).Query(query, properties, nil)
-	model.ModelGroup = modelGroup
-	if err := ms.Neo4jDomain.Update(model); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (ms *ModelService) GetAllGroup() (*[]store.ModelGroup, error) {
+func (ms *ModelService) GetAllModelGroup() (*[]store.ModelGroup, error) {
 	modelGroups := make([]store.ModelGroup, 0)
-	err := ms.Neo4jDomain.List(&modelGroups)
+	err := store.GetSession(true).LoadAllDepth(&modelGroups, 2)
 	return &modelGroups, err
 }
 
@@ -48,12 +31,72 @@ func (ms *ModelService) GetModelGroup(uuid string) (*store.ModelGroup, error) {
 	return modelGroup, nil
 }
 
-func (ms *ModelService) CreateModelGroup(model *store.ModelGroup) error {
-	return ms.Neo4jDomain.Save(model)
+func (ms *ModelService) CreateModelGroup(vo *common.AddModelGroupVO, operator string) (*store.ModelGroup, error) {
+	modelGroup := &store.ModelGroup{}
+	if err := ms.Neo4jDomain.Get(modelGroup, "uid", vo.Uid); err == nil {
+		return nil, fmt.Errorf("已存在uid是%s的模型分组", vo.Uid)
+	}
+
+	utils.SimpleConvert(modelGroup, vo)
+
+	commonObj := &store.CommonObj{}
+	commonObj.InitCommonObj(operator)
+	modelGroup.CommonObj = *commonObj
+	err := ms.Neo4jDomain.Save(modelGroup)
+	return modelGroup, err
 }
 
-func (ms *ModelService) CreateModel(model *store.Model) error {
-	return ms.Neo4jDomain.Save(model)
+func (ms *ModelService) UpdateModelGroup(vo *common.AddModelGroupVO, operator string) (*store.ModelGroup, error) {
+	modelGroup := &store.ModelGroup{}
+
+	if err := ms.Neo4jDomain.Get(modelGroup, "uid", vo.Uid); err != nil {
+		return nil, err
+	}
+
+	modelGroup.Name = vo.Name
+	modelGroup.UpdateTime = time.Now().Unix()
+	modelGroup.CommonObj.Editor = operator
+
+	err := ms.Neo4jDomain.Update(modelGroup)
+	return modelGroup, err
+}
+
+func (ms *ModelService) CreateModel(vo *common.AddModelVO, operator string) (*store.Model, error) {
+	model := &store.Model{}
+	if err := ms.Neo4jDomain.Get(model, "uid", vo.Uid); err == nil {
+		return nil, fmt.Errorf("已存在uid是%s的模型", vo.Uid)
+	}
+
+	utils.SimpleConvert(model, vo)
+
+	modelGroup := &store.ModelGroup{}
+	if err := ms.Neo4jDomain.Get(modelGroup, "uuid", vo.ModelGroupUUID); err != nil {
+		return nil, err
+	}
+
+	commonObj := &store.CommonObj{}
+	commonObj.InitCommonObj(operator)
+	model.CommonObj = *commonObj
+	model.ModelGroup = modelGroup
+	err := ms.Neo4jDomain.Save(model)
+	return model, err
+}
+
+func (ms *ModelService) DeleteModel(uuid, operator string) error {
+	model := &store.Model{}
+	err := ms.Neo4jDomain.Get(model, "uuid", uuid)
+	if err != nil {
+		return err
+	}
+
+	resource := &store.Resource{}
+	err = ms.Neo4jDomain.Get(resource, "modelUid", model.Uid)
+	if resource.UUID != "" {
+		return errors.New("该模型已被使用，禁止删除")
+	}
+
+	// TODO test
+	return ms.Neo4jDomain.Delete(model)
 }
 
 func (ms *ModelService) GetModelList(limit string, pageNumber string) (*[]store.Model, error) {
@@ -77,9 +120,25 @@ func (ms *ModelService) GetModelList(limit string, pageNumber string) (*[]store.
 	return &allModel, nil
 }
 
-func (ms *ModelService) GetModelInstance(uuid string) (*store.Model, error) {
+func (ms *ModelService) GetModel(uuid string) (*store.Model, error) {
 	model := &store.Model{}
-	err := store.GetSession(true).Load(model, uuid)
+	err := ms.Neo4jDomain.Get(model, "uuid", uuid)
+	if err != nil {
+		return nil, err
+	}
+
+	attributeGroups := &[]*store.AttributeGroup{}
+	query := "MATCH (a:Model {uuid: $uuid})-[]-(b:AttributeGroup) RETURN b"
+	_ = ms.ManualQuery(query, map[string]interface{}{"uuid": uuid}, attributeGroups)
+
+	model.AttributeGroups = *attributeGroups
+
+	for _, ag := range *attributeGroups {
+		attributes := &[]*store.Attribute{}
+		query = "MATCH (a:AttributeGroup {uuid: $uuid})-[]-(b:Attribute) RETURN b"
+		_ = ms.ManualQuery(query, map[string]interface{}{"uuid": ag.UUID}, attributes)
+		ag.Attributes = *attributes
+	}
 	return model, err
 }
 

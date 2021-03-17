@@ -63,10 +63,28 @@ type ResourceListPageParamVO struct {
 	QueryMap   *map[string]string `json:"queryMap" binding:""`
 }
 
+type AddModelGroupVO struct {
+	Uid  string `json:"uid" binding:"required"`
+	Name string `json:"name" binding:"required"`
+}
+
 type AddModelVO struct {
 	ModelGroupUUID string `json:"modelGroupUUID" binding:"required"`
 	Uid            string `json:"uid" binding:"required"`
 	Name           string `json:"name" binding:"required"`
+}
+
+type AddAttributeGroupVO struct {
+	ModelUUID string `json:"modelUUID" binding:"required"`
+	Uid       string `json:"uid" binding:"required"`
+	Name      string `json:"name" binding:"required"`
+}
+
+type UpdateAttributeGroupVO struct {
+	UUID      string `json:"uuid" binding:"required"`
+	ModelUUID string `json:"modelUUID" binding:"required"`
+	Uid       string `json:"uid" binding:"required"`
+	Name      string `json:"name" binding:"required"`
 }
 
 type RelationshipModelUpdateVO struct {

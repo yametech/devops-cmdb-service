@@ -16,7 +16,7 @@ type AttributeCommon struct {
 	// 是否必填
 	Required bool `json:"required" gogm:"name=required"`
 	// 默认值
-	DefaultValue string `json:"defaultValue" gogm:"name=defaultValue"`
+	DefaultValue interface{} `json:"defaultValue" gogm:"name=defaultValue"`
 	// 单位
 	Unit string `json:"unit" gogm:"name=unit"`
 	// 最大值

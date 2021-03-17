@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/yametech/devops-cmdb-service/pkg/api"
+	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 )
 
@@ -41,46 +42,30 @@ func (s *Server) getAttributeGroup(ctx *gin.Context) {
 }
 
 func (s *Server) createAttributeGroup(ctx *gin.Context) {
-	rawData, err := ctx.GetRawData()
-	if err != nil {
+	vo := &common.AddAttributeGroupVO{}
+	if err := ctx.ShouldBindJSON(vo); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	unstructured := make(map[string]interface{})
-	if err := json.Unmarshal(rawData, &unstructured); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	modelUUID := fmt.Sprintf("%v", unstructured["modeluuid"])
 
-	model, err := s.ModelService.GetModelInstance(modelUUID)
-	if err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	attributeGroup, err := s.AttributeService.CreateAttributeGroup(rawData, model)
+	result, err := s.AttributeService.CreateAttributeGroup(vo, "")
+
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
 
-	api.RequestOK(ctx, attributeGroup)
+	api.RequestOK(ctx, result)
 }
 
 func (s *Server) putAttributeGroup(ctx *gin.Context) {
-	rawData, err := ctx.GetRawData()
-	if err != nil {
+	vo := &common.UpdateAttributeGroupVO{}
+	if err := ctx.ShouldBindJSON(vo); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	unstructured := make(map[string]interface{})
-	if err := json.Unmarshal(rawData, &unstructured); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	uuid := fmt.Sprintf("%v", unstructured["uuid"])
 
-	attributeGroup, err := s.AttributeService.UpdateAttributeGroupInstance(rawData, uuid)
+	attributeGroup, err := s.AttributeService.UpdateAttributeGroup(vo, "")
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -90,22 +75,6 @@ func (s *Server) putAttributeGroup(ctx *gin.Context) {
 }
 
 func (s *Server) deleteAttributeGroup(ctx *gin.Context) {
-	rawData, err := ctx.GetRawData()
-	if err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	unstructured := make(map[string]interface{})
-	if err := json.Unmarshal(rawData, &unstructured); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	uuid := fmt.Sprintf("%v", unstructured["uuid"])
-	err = s.AttributeService.DeleteAttributeGroup(uuid)
-	if err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
 	api.RequestOK(ctx, "")
 }
 

@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mindstand/gogm"
+	"github.com/stretchr/testify/assert"
+	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/service"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -72,14 +75,35 @@ func TestRelation(t *testing.T) {
 }
 
 func TestMyTest(t *testing.T) {
-	relationshipService := service.RelationshipService{}
-	//res, _ := relationshipService.GetResourceRelationList("69906653-b834-4208-91e5-38fd262003d1")
-	res, _ := relationshipService.GetResourceRelationList("6ae509e1-f6a7-438d-b336-c96d33b64e34")
-	printOut(res)
 
-	//resourceService := service.ResourceService{}
-	//res := resourceService.GetModelAttributeList("host")
-	//printOut(res)
+	attributeService := service.AttributeService{}
+	attribute := &[]*store.Attribute{}
+	// CREATE (:User {email: $email, username: $username, password: $password})
+	properties := map[string]interface{}{
+		"modelUid": "jigui",
+	}
+	err := attributeService.ManualQuery("MATCH (a:Attribute {modelUid: $modelUid}) RETURN a", properties, attribute)
+	printOut(err)
+	printOut(attribute)
+
+	attributeGroups := &[]*store.AttributeGroup{}
+	query := "MATCH (a:Model {uuid: $uuid})-[]-(b:AttributeGroup) RETURN b"
+	_ = attributeService.ManualQuery(query, map[string]interface{}{"uuid": "c558b119-2848-4eb3-905d-989967d8c9f7"}, attributeGroups)
+	printOut(attributeGroups)
+
+}
+
+func TestRouter(t *testing.T) {
+	server := &api.BaseServer{}
+	router := server.GINEngine()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/cmdb/web/model-attribute/jigui", nil)
+	router.ServeHTTP(w, req)
+
+	fmt.Println(w.Body)
+	assert.Equal(t, 200, w.Code)
+	assert.Equal(t, "pong", w.Body.String())
 }
 
 func TestGetModel(t *testing.T) {
@@ -152,7 +176,7 @@ func TestInit(t *testing.T) {
 	body2 := "{\"modelUid\":\"cabinet\",\"modelName\":\"机柜\",\"attributeGroupIns\":[{\"uid\":\"baseInfo\",\"attributeIns\":[{\"uid\":\"ip\",\"attributeInsValue\":\"1\"},{\"uid\":\"cpu\",\"attributeInsValue\":\"12\"}]},{\"uid\":\"otherInfo\",\"attributeIns\":[{\"uid\":\"test\",\"attributeInsValue\":\"testttstset\"}]}]}"
 	resourceResult2, err := resourceService.AddResource(body2, "")
 
-	relationshipService := service.RelationshipService{}
+	relationshipService := service.RelationService{}
 	resource1 := resourceResult.(*store.Resource)
 	resource2 := resourceResult2.(*store.Resource)
 	resource3 := resourceResult3.(*store.Resource)

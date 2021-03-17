@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
+	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type AttributeService struct {
@@ -14,24 +17,6 @@ type AttributeService struct {
 	store.Neo4jDomain
 	Mutex sync.Mutex
 }
-
-//func (as *AttributeService) CheckExists(modelType, uuid string) bool {
-//	switch modelType {
-//	case "attribute":
-//		err := as.Attribute.Get(as.Session, uuid)
-//		if err != nil {
-//			return false
-//		}
-//		return true
-//	case "attributeGroup":
-//		err := as.AttributeGroup.Get(as.Session, uuid)
-//		if err != nil {
-//			return false
-//		}
-//		return true
-//	}
-//	return false
-//}
 
 func (as *AttributeService) ChangeModelGroup(attribute *store.Attribute, uuid string) error {
 	attributeGroup, err := as.GetAttributeGroupInstance(uuid)
@@ -54,18 +39,6 @@ func (as *AttributeService) ChangeModelGroup(attribute *store.Attribute, uuid st
 	}
 	return nil
 }
-
-//func (as *AttributeService) CleanModelGroup(uuid string) error {
-//	attributeGroup := &store.AttributeGroup{}
-//	if err := as.Neo4jDomain.Get(attributeGroup, "uuid", uuid); err != nil {
-//		return err
-//	}
-//	as.Attribute.AttributeGroup = &as.AttributeGroup
-//	if err := as.AttributeGroup.Save(as.Session); err != nil {
-//		return err
-//	}
-//	return nil
-//}
 
 func (as *AttributeService) GetAttributeGroupList(limit string, pageNumber string) (*[]store.AttributeGroup, error) {
 	limitInt, err := strconv.Atoi(limit)
@@ -105,36 +78,51 @@ func (as *AttributeService) GetAttributeGroupInstance(uuid string) (*store.Attri
 	return attributeGroup, nil
 }
 
-func (as *AttributeService) CreateAttributeGroup(rawData []byte, model *store.Model) (*store.AttributeGroup, error) {
-	attributeGroup := &store.AttributeGroup{}
-	if err := json.Unmarshal(rawData, attributeGroup); err != nil {
+func (as *AttributeService) CreateAttributeGroup(attributeGroupVO *common.AddAttributeGroupVO, operator string) (*store.AttributeGroup, error) {
+	model := &store.Model{}
+	if err := as.Neo4jDomain.Get(model, "uuid", attributeGroupVO.ModelUUID); err != nil {
 		return nil, err
 	}
 
-	attributeGroup.Model = model
+	// TODO check exist
+
+	attributeGroup := &store.AttributeGroup{}
+	utils.SimpleConvert(attributeGroup, attributeGroupVO)
 	attributeGroup.ModelUid = model.Uid
-	err := store.GetSession(false).SaveDepth(attributeGroup, 2)
-	if err != nil {
+	commonObj := &store.CommonObj{}
+	commonObj.InitCommonObj(operator)
+	attributeGroup.CommonObj = *commonObj
+	attributeGroup.Model = model
+
+	if err := as.Neo4jDomain.Save(attributeGroup); err != nil {
 		return nil, err
 	}
 	return attributeGroup, nil
 }
 
-func (as *AttributeService) UpdateAttributeGroupInstance(rawData []byte, uuid string) (*store.AttributeGroup, error) {
-
-	unstructured := make(map[string]interface{})
-	if err := json.Unmarshal(rawData, &unstructured); err != nil {
-		return nil, err
+func (as *AttributeService) isAttributeGroupExist(modelUid, uid, name string) bool {
+	exists := &[]store.AttributeGroup{}
+	query := "MATCH (a:AttributeGroup {modelUid: $modelUid, uid: $uid}) RETURN a"
+	properties := map[string]interface{}{
+		"modelUid": modelUid,
+		"uid":      uid,
+		"name":     name,
 	}
+	_ = as.ManualQuery(query, properties, exists)
 
+	return len(*exists) > 0
+}
+
+func (as *AttributeService) UpdateAttributeGroup(attributeGroupVO *common.UpdateAttributeGroupVO, operator string) (*store.AttributeGroup, error) {
 	attributeGroup := &store.AttributeGroup{}
-	if err := json.Unmarshal(rawData, attributeGroup); err != nil {
+	if err := as.Neo4jDomain.Get(attributeGroup, "uuid", attributeGroupVO.UUID); err != nil {
 		return nil, err
 	}
-	attributeGroup.UUID = uuid
 
-	err := store.GetSession(false).Save(attributeGroup)
-	if err != nil {
+	attributeGroup.Name = attributeGroupVO.Name
+	attributeGroup.UpdateTime = time.Now().Unix()
+	attributeGroup.Editor = operator
+	if err := as.Neo4jDomain.Update(attributeGroup); err != nil {
 		return nil, err
 	}
 	return attributeGroup, nil
@@ -142,13 +130,13 @@ func (as *AttributeService) UpdateAttributeGroupInstance(rawData []byte, uuid st
 
 func (as *AttributeService) DeleteAttributeGroup(uuid string) error {
 
-	attributeGroup := &store.AttributeGroup{}
-	if err := as.Neo4jDomain.Get(attributeGroup, "uuid", uuid); err != nil {
-		return err
-	}
-	if err := as.Neo4jDomain.Delete(attributeGroup); err != nil {
-		return err
-	}
+	//attributeGroup := &store.AttributeGroup{}
+	//if err := as.Neo4jDomain.Get(attributeGroup, "uuid", uuid); err != nil {
+	//	return err
+	//}
+	//if err := as.Neo4jDomain.Delete(attributeGroup); err != nil {
+	//	return err
+	//}
 	return nil
 }
 
