@@ -6,6 +6,7 @@ import (
 	"github.com/mindstand/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/core"
 	"reflect"
+	"time"
 )
 
 type IStore interface {
@@ -20,7 +21,7 @@ type IStore interface {
 func Neo4jInit(host string, username string, password string) {
 	config := &gogm.Config{
 		IndexStrategy: gogm.VALIDATE_INDEX, //other options are ASSERT_INDEX and IGNORE_INDEX
-		PoolSize:      50,
+		PoolSize:      500,
 		Port:          7687,
 		IsCluster:     false, //tells it whether or not to use `bolt+routing`
 		Host:          host,
@@ -47,10 +48,13 @@ func GetSession(readonly bool) *gogm.Session {
 
 	//close the session
 	defer func() {
+		start := time.Now()
 		if e := sess.Close(); e != nil {
 			fmt.Println("close the session err：", e)
 		}
-		fmt.Println("close the session finished")
+		end := time.Now()
+		latency := end.Sub(start)
+		fmt.Println("close the session finished cost:", latency)
 	}()
 
 	return sess
