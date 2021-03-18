@@ -13,11 +13,11 @@ import (
 )
 
 func (s *Server) getAllGroup(ctx *gin.Context) {
-	allMG, err := s.ModelService.GetAllModelGroup()
-	if err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
+	allMG, _ := s.ModelService.GetAllModelGroup()
+	//if err != nil {
+	//	api.RequestErr(ctx, err)
+	//	return
+	//}
 	api.RequestOK(ctx, allMG)
 }
 

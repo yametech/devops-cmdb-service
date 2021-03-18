@@ -62,24 +62,22 @@ func (r *RelationshipApi) getResourceRelationList(ctx *gin.Context) {
 }
 
 func (r *RelationshipApi) addResourceRelation(ctx *gin.Context) {
-	rawData, _ := ctx.GetRawData()
-	paramMap, err := utils.Stream2Json(rawData)
-	if err != nil {
-		ResultHandle(ctx, paramMap, err)
+	vo := &common.ResourceRelationVO{}
+	if err := ctx.ShouldBindJSON(vo); err != nil {
+		ResultHandle(ctx, nil, err)
 		return
 	}
 
-	result, err := r.relationService.AddResourceRelation((*paramMap)["source_uuid"], (*paramMap)["target_uuid"], (*paramMap)["uid"])
+	result, err := r.relationService.AddResourceRelation(vo.SourceUUID, vo.TargetUUID, vo.Uid)
 	ResultHandle(ctx, result, err)
 }
 
 func (r *RelationshipApi) deleteResourceRelation(ctx *gin.Context) {
-	rawData, _ := ctx.GetRawData()
-	paramMap, err := utils.Stream2Json(rawData)
-	if err != nil {
-		ResultHandle(ctx, paramMap, err)
+	vo := &common.ResourceRelationVO{}
+	if err := ctx.ShouldBindJSON(vo); err != nil {
+		ResultHandle(ctx, nil, err)
 		return
 	}
-	result, err := r.relationService.DeleteResourceRelation((*paramMap)["source_uuid"], (*paramMap)["target_uuid"], (*paramMap)["uid"])
+	result, err := r.relationService.DeleteResourceRelation(vo.SourceUUID, vo.TargetUUID, vo.Uid)
 	ResultHandle(ctx, result, err)
 }

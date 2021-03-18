@@ -113,3 +113,9 @@ type IdVO struct {
 	Uid  string `json:"uid"`
 	UUID string `json:"uuid"`
 }
+
+type ResourceRelationVO struct {
+	SourceUUID string `json:"sourceUUID" form:"sourceUUID" binding:"required"`
+	TargetUUID string `json:"targetUUID" form:"targetUUID" binding:"required"`
+	Uid        string `json:"uid" form:"uid" binding:"required"`
+}

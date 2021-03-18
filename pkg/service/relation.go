@@ -260,7 +260,7 @@ func convert2ResourceRelationListPageVO(row []interface{}, uuid string) *common.
 }
 
 func (rs RelationService) DeleteResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
-	query := "match (a:Resource)-[r:Relation]-(b:Resource) where r.uid = $uid and a.uuid = $sourceUid and b.uuid = $targetUid delete  r"
+	query := "match (a:Resource)-[r:Relation]-(b:Resource) where r.uid = $uid and a.uuid = $sourceUUID and b.uuid = $targetUUID delete  r"
 	return rs.ManualExecute(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
 }
 
