@@ -1,12 +1,12 @@
 package store
 
 import (
-	"github.com/mindstand/gogm"
+	"github.com/yametech/devops-cmdb-service/pkg/gogm"
 )
 
 type Resource struct {
 	gogm.BaseNode
-	ModelUid          string               `json:"modelUid" gogm:"name=modelUid"`
+	ModelUid          string               `json:"modelUid" gogm:"index;name=modelUid"`
 	ModelName         string               `json:"modelName" gogm:"name=modelName"`
 	Models            *Model               `json:"-" gogm:"direction=outgoing;relationship=Instance"`
 	Resource          *Resource            `json:"-" gogm:"direction=both;relationship=Relation"`

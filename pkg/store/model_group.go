@@ -1,7 +1,7 @@
 package store
 
 import (
-	"github.com/mindstand/gogm"
+	"github.com/yametech/devops-cmdb-service/pkg/gogm"
 )
 
 type ModelGroup struct {
@@ -12,25 +12,11 @@ type ModelGroup struct {
 	CommonObj
 }
 
-/*func (mg *ModelGroup) Save(session *gogm.Session) error {
-	mg.CreateTime = time.Now().Unix()
-	mg.UpdateTime = time.Now().Unix()
-	return session.Save(mg)
-}
-
-func (mg *ModelGroup) Update(session *gogm.Session) error {
-	mg.UpdateTime = time.Now().Unix()
-	return session.Save(mg)
-}
-
-func (mg *ModelGroup) Get(session *gogm.Session, uuid string) error {
-	query := fmt.Sprintf("match (a:ModelGroup) where a.uuid = $uuid return a")
-	properties := map[string]interface{}{
-		"uuid": uuid,
+func (g *ModelGroup) AddModel(model *Model) {
+	for _, m := range g.Models {
+		if m.Uid == model.Uid {
+			return
+		}
 	}
-	return session.Query(query, properties, mg)
+	g.Models = append(g.Models, model)
 }
-
-func (mg *ModelGroup) Delete(session *gogm.Session) error {
-	return session.Delete(mg)
-}*/

@@ -1,7 +1,7 @@
 package store
 
 import (
-	"github.com/mindstand/gogm"
+	"github.com/yametech/devops-cmdb-service/pkg/gogm"
 	"time"
 )
 
@@ -16,41 +16,18 @@ type CommonObj struct {
 // 关系模型
 type RelationshipModel struct {
 	gogm.BaseNode
-	Uid  string `json:"uid" gogm:"unique;name=uid"`
-	Name string `json:"name" gogm:"name=name"`
-	// 源->目标描述
-	Source2Target string `json:"source2Target" gogm:"name=source2Target"`
-	// 目标->源描述
-	Target2Source string `json:"target2Source" gogm:"name=target2Source"`
-	// direction 方向：源指向目标，无方向，双方向
-	Direction string `json:"direction" gogm:"name=direction"`
-	Usage     int    `json:"usage" gogm:"name=usage"`
+	Uid           string `json:"uid" gogm:"unique;name=uid"`
+	Name          string `json:"name" gogm:"name=name"`
+	Source2Target string `json:"source2Target" gogm:"name=source2Target"` // 源->目标描述
+	Target2Source string `json:"target2Source" gogm:"name=target2Source"` // 目标->源描述
+	Direction     string `json:"direction" gogm:"name=direction"`         // direction 方向：源指向目标，无方向，双方向
+	CurrentUsage  int    `json:"currentUsage" gogm:"name=currentUsage"`
 	CommonObj
 }
-
-//type ModelRelationTest struct {
-//	gogm.BaseNode
-//	Start      *Model
-//	End        *Model
-//	Constraint string `json:"constraint" gogm:"name=constraint"`
-//	// 源uid
-//	SourceUid string `json:"sourceUid" gogm:"name=sourceUid"`
-//	// 目标uid
-//	TargetUid string `json:"targetUid" gogm:"name=targetUid"`
-//	// 关系类型uid
-//	RelationshipUid string `json:"relationshipUid" gogm:"name=relationshipUid"`
-//	CommonObj
-//}
 
 // 模型关系
 type ModelRelation struct {
 	gogm.BaseNode
-	//Uid             string `json:"uid" gogm:"name=uid"`
-	//RelationshipUid string `json:"relationshipUid" gogm:"name=relationshipUid"`
-	//Constraint      string `json:"constraint" gogm:"name=constraint"`
-	//SourceUid       string `json:"sourceUid" gogm:"name=sourceUid"`
-	//TargetUid       string `json:"targetUid" gogm:"name=targetUid"`
-	//Comment         string `json:"comment" gogm:"name=comment"`
 	Uid             string      `json:"uid"`
 	RelationshipUid string      `json:"relationshipUid"`
 	Constraint      string      `json:"constraint"`
@@ -62,8 +39,7 @@ type ModelRelation struct {
 
 type Model struct {
 	gogm.BaseNode
-	Uid string `json:"uid" gogm:"unique;name=uid"`
-	//Uuid             string            `json:"Uuid" gogm:"unique;name=uuid"`
+	Uid             string            `json:"uid" gogm:"unique;name=uid"`
 	Name            string            `json:"name" gogm:"name=name"`
 	IconUrl         string            `json:"iconUrl" gogm:"name=iconUrl"`
 	Model           *Model            `json:"-" gogm:"direction=both;relationship=Relation"`
@@ -84,17 +60,14 @@ func (m *Model) AddAttributeGroup(target *AttributeGroup) {
 	if target == nil {
 		return
 	}
-
 	if m.AttributeGroups == nil {
 		m.AttributeGroups = make([]*AttributeGroup, 0)
 	}
-
 	for _, attributeGroup := range m.AttributeGroups {
 		if attributeGroup.Uid == target.Uid {
 			return
 		}
 	}
-
 	m.AttributeGroups = append(m.AttributeGroups, target)
 }
 
@@ -104,7 +77,6 @@ func (m *Model) GetAttributeGroupByUid(uid string) *AttributeGroup {
 			return group
 		}
 	}
-
 	return nil
 }
 
@@ -114,6 +86,5 @@ func (m *AttributeGroup) GetAttributeByUid(uid string) *Attribute {
 			return attributes
 		}
 	}
-
 	return nil
 }

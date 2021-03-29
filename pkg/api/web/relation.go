@@ -2,6 +2,7 @@ package web
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
 	"github.com/yametech/devops-cmdb-service/pkg/service"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
@@ -26,8 +27,13 @@ func (r *RelationshipApi) router(e *gin.Engine) {
 }
 
 func (r *RelationshipApi) addModelRelation(ctx *gin.Context) {
-	rawData, _ := ctx.GetRawData()
-	result, err := r.relationService.AddModelRelation(string(rawData), "")
+	vo := &common.AddModelRelationVO{}
+	if err := ctx.ShouldBindJSON(vo); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+
+	result, err := r.relationService.AddModelRelation(vo, ctx.GetHeader("x-wrapper-username"))
 	ResultHandle(ctx, result, err)
 }
 
@@ -46,8 +52,13 @@ func (r *RelationshipApi) getModelRelationList(ctx *gin.Context) {
 }
 
 func (r *RelationshipApi) updateModelRelation(ctx *gin.Context) {
-	rawData, _ := ctx.GetRawData()
-	result, err := r.relationService.UpdateModelRelation(string(rawData), "")
+	vo := &common.UpdateModelRelationVO{}
+	if err := ctx.ShouldBindJSON(vo); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+
+	result, err := r.relationService.UpdateModelRelation(vo, ctx.GetHeader("x-wrapper-username"))
 	ResultHandle(ctx, result, err)
 }
 

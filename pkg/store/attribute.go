@@ -1,42 +1,26 @@
 package store
 
 import (
-	"github.com/mindstand/gogm"
+	"github.com/yametech/devops-cmdb-service/pkg/gogm"
 )
 
 type AttributeCommon struct {
-	//  唯一标识
-	Uid string `json:"uid" gogm:"name=uid"`
-	// 名称
-	Name string `json:"name" gogm:"name=name"`
-	// 类型:短字符,长字符,数字,浮点,枚举,日期,时间,用户,布尔,列表
-	ValueType string `json:"valueType" gogm:"name=valueType"`
-	// 是否可编辑
-	Editable bool `json:"editable" gogm:"name=editable"`
-	// 是否必填
-	Required bool `json:"required" gogm:"name=required"`
-	// 默认值
-	DefaultValue interface{} `json:"defaultValue" gogm:"name=defaultValue"`
-	// 单位
-	Unit string `json:"unit" gogm:"name=unit"`
-	// 最大值
-	Maximum string `json:"maximum" gogm:"name=maximum"`
-	// 最小值
-	Minimum string `json:"minimum" gogm:"name=minimum"`
-	// 枚举值：{id1:value1,id2:value2...}
-	Enums string `json:"enums" gogm:"name=enums"`
-	// 列表：value1,value2
-	ListValues string `json:"listValues" gogm:"name=listValues"`
-	// 用户提示内容
-	Tips string `json:"tips" gogm:"name=tips"`
-	// 正则内容
-	Regular string `json:"regular" gogm:"name=regular"`
-	// 备注描述
-	Comment string `json:"comment" gogm:"name=comment"`
-	// 字段是否可见
-	Visible bool `json:"visible" gogm:"name=visible"`
-	// 模型唯一标识
-	ModelUid string `json:"modelUid" gogm:"name=modelUid"`
+	Uid          string      `json:"uid" gogm:"index;name=uid"`             //  唯一标识
+	Name         string      `json:"name" gogm:"name=name"`                 // 名称
+	ValueType    string      `json:"valueType" gogm:"name=valueType"`       // 类型:短字符,长字符,数字,浮点,枚举,日期,时间,用户,布尔,列表
+	Editable     bool        `json:"editable" gogm:"name=editable"`         // 是否可编辑
+	Required     bool        `json:"required" gogm:"name=required"`         // 是否必填
+	DefaultValue interface{} `json:"defaultValue" gogm:"name=defaultValue"` // 默认值
+	Unit         string      `json:"unit" gogm:"name=unit"`                 // 单位
+	Maximum      string      `json:"maximum" gogm:"name=maximum"`           // 最大值
+	Minimum      string      `json:"minimum" gogm:"name=minimum"`           // 最小值
+	Enums        interface{} `json:"enums" gogm:"name=enums"`               // 枚举值：{id1:value1,id2:value2...}
+	ListValues   interface{} `json:"listValues" gogm:"name=listValues"`     // 列表：value1,value2
+	Tips         string      `json:"tips" gogm:"name=tips"`                 // 用户提示内容
+	Regular      string      `json:"regular" gogm:"name=regular"`           // 正则内容
+	Comment      string      `json:"comment" gogm:"name=comment"`           // 备注描述
+	Visible      bool        `json:"visible" gogm:"name=visible"`           // 字段是否可见
+	ModelUid     string      `json:"modelUid" gogm:"index;name=modelUid"`   // 模型唯一标识
 }
 
 type Attribute struct {
@@ -46,49 +30,3 @@ type Attribute struct {
 	// 公共字段：创建人，更新人，创建时间，更新时间
 	CommonObj
 }
-
-/*func (a *Attribute) LoadAll(session *gogm.Session, groupId string) (*[]*Attribute, error) {
-	aList := make([]*Attribute, 0)
-	query := fmt.Sprintf("match (a:Attribute)-[r:GroupBy]->(b:AttributeGroup) where b.uuid=$uuid return a")
-	properties := map[string]interface{}{
-		"uuid": groupId,
-	}
-	err := session.Query(query, properties, &aList)
-	if err != nil {
-		return nil, err
-	}
-	return &aList, nil
-}
-
-func (a *Attribute) Get(session *gogm.Session, uuid string) error {
-	query := fmt.Sprintf("match (a:Attribute) where a.uuid = $uuid return a")
-	properties := map[string]interface{}{
-		"uuid": uuid,
-	}
-	return session.Query(query, properties, a)
-}
-
-func (a *Attribute) Delete(session *gogm.Session) error {
-	return session.Delete(a)
-}
-
-func (obj *Attribute) Save(session *gogm.Session) error {
-	//obj.Visible = true
-	obj.CreateTime = time.Now().Unix()
-	obj.UpdateTime = time.Now().Unix()
-	return session.Save(obj)
-}
-
-func (a *Attribute) Update(session *gogm.Session) error {
-	a.UpdateTime = time.Now().Unix()
-	return session.Save(a)
-}
-
-func (obj *Attribute) List(field string, value interface{}) interface{} {
-	result := &[]Attribute{}
-	query := fmt.Sprintf("MATCH (a:Attribute {%s:$%s})", field, field)
-	properties := map[string]interface{}{field: value}
-	_ = GetSession(true).Query(query, properties, result)
-	return result
-}
-*/

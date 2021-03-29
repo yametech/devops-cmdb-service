@@ -1,54 +1,24 @@
 package service
 
 import (
-	"flag"
-	"fmt"
-	"github.com/mindstand/gogm"
-	"github.com/yametech/devops-cmdb-service/pkg/core"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"sync"
 )
 
 type Service struct {
-	store.IStore
-}
-
-type fakeService struct {
-	Service
-}
-
-type NeoSession struct {
-	Session        *gogm.Session
-	Mutex          sync.Mutex
-}
-
-func (f *fakeService) GetMember(uuid string) core.IObject {
-	obj, err := f.Get(uuid)
-	if err != nil {
-		//
-	}
-	return obj
-}
-
-func init() {
-	var host, username, password string
-	flag.StringVar(&host, "host", "localhost", "-host xxxx")
-	flag.StringVar(&username, "username", "neo4j", "-username xxxx")
-	flag.StringVar(&password, "password", "123456", "-password xxxx")
-	flag.Parse()
-	fmt.Println("Neo4jInit....start")
-	store.Neo4jInit(host, username, password)
-	fmt.Println("Neo4jInit....end")
+	//store.IStore
+	store.Neo4jDomain
+	mutex sync.Mutex
 }
 
 func (s *Service) ManualQuery(query string, properties map[string]interface{}, respObj interface{}) error {
-	return store.GetSession(true).Query(query, properties, respObj)
+	return s.GetSession(true).Query(query, properties, respObj)
 }
 
 func (s *Service) ManualQueryRaw(query string, properties map[string]interface{}) ([][]interface{}, error) {
-	return store.GetSession(true).QueryRaw(query, properties)
+	return s.GetSession(true).QueryRaw(query, properties)
 }
 
 func (s *Service) ManualExecute(query string, properties map[string]interface{}) ([][]interface{}, error) {
-	return store.GetSession(false).QueryRaw(query, properties)
+	return s.GetSession(false).QueryRaw(query, properties)
 }

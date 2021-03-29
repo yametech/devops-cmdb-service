@@ -1,0 +1,7 @@
+# Build the manager binary
+FROM harbor.ym/devops/cmdbweb:base
+WORKDIR /
+ADD . .
+# Build
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a --ldflags "-extldflags -static"  -o build/web cmd/web/*.go
+ENTRYPOINT ["./web"]

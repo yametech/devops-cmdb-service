@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/mindstand/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
+	"github.com/yametech/devops-cmdb-service/pkg/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
 	"regexp"
@@ -16,14 +16,16 @@ import (
 
 type ResourceService struct {
 	Service
-	store.Neo4jDomain
 }
 
 // 创建实例时候获取模型基础信息
-func (rs ResourceService) GetModelInfoForIns(uid string) (interface{}, error) {
+func (rs ResourceService) GetModelInfoForIns(uid string) (*store.Resource, error) {
 	m := &store.Model{}
 	err := rs.Neo4jDomain.Get(m, "uid", uid)
 	if err != nil {
+		if m.UUID == "" {
+			return nil, errors.New("模型已被删除")
+		}
 		return nil, err
 	}
 
@@ -32,7 +34,7 @@ func (rs ResourceService) GetModelInfoForIns(uid string) (interface{}, error) {
 	resource.ModelUid = m.Uid
 	resource.ModelName = m.Name
 
-	query := "MATCH (a:Model)-[]-(b:AttributeGroup)-[]-(c:Attribute) WHERE a.uid =$uid RETURN a,b,c"
+	query := "MATCH (a:Model)-[]-(b:AttributeGroup)-[]-(c:Attribute) WHERE a.uid =$uid RETURN a,b,c ORDER BY c.createTime ASC"
 	result, err := rs.ManualQueryRaw(query, map[string]interface{}{"uid": uid})
 	if err != nil {
 		return nil, err
@@ -57,9 +59,21 @@ func (rs ResourceService) GetModelInfoForIns(uid string) (interface{}, error) {
 
 // 模型属性字段列表
 func (rs *ResourceService) GetModelAttributeList(modelUid string) interface{} {
-	a := &[]store.Attribute{}
-	rs.Neo4jDomain.Get(a, "modelUid", modelUid)
-	return a
+	list := make([]*store.Attribute, 0)
+
+	resource, err := rs.GetModelInfoForIns(modelUid)
+	if err != nil {
+		return nil
+	}
+	for _, group := range resource.AttributeGroupIns {
+		for _, att := range group.AttributeIns {
+			attribute := &store.Attribute{}
+			utils.SimpleConvert(attribute, att)
+			list = append(list, attribute)
+		}
+	}
+
+	return list
 }
 
 // 设置预览属性
@@ -72,19 +86,31 @@ func (rs *ResourceService) SetModelAttribute(modelUid string, result *[]common.M
 	return nil
 }
 
-func (rs *ResourceService) GetAllModeList() interface{} {
-	modelList := &[]store.Model{}
-	rs.Neo4jDomain.List(modelList)
-	return modelList
-}
-
 // 获取模型实例列表，
 // 支持2种查询方式：1.根据指定字段查询，2.不指定字段查询
-func (rs ResourceService) GetResourceListPageByMap(modelUid string, pageNumber int, pageSize int, queryMap *map[string]string) interface{} {
-	queryCommon := "MATCH (a:Resource)-[]-()-[]-(b:AttributeIns) "
+func (rs *ResourceService) GetResourceListPageByMap(uuid, modelUid, modelRelationUid string, pageNumber int, pageSize int, queryMap *map[string]string) interface{} {
+	queryCommon := "MATCH p=(a:Resource)-[]-()-[]-(b:AttributeIns) "
 	where := "WHERE a.modelUid ='" + modelUid + "' AND "
 	for k, v := range *queryMap {
-		where += "b." + k + "='" + v + "' AND "
+		if k == "ID" {
+			where += "ID(a) =" + strings.TrimSpace(v) + " AND "
+		} else {
+			where += "b.uid='" + k + "' AND b.attributeInsValue=~'.*" + strings.TrimSpace(v) + ".*' AND "
+		}
+	}
+
+	// uuid 不为空，则需排除跟此资源有关联的实例
+	if uuid != "" {
+		query := "MATCH (a:Resource)-[r:Relation]-(b:Resource) WHERE a.uuid = $uuid and r.uid = $modelRelationUid RETURN b.uuid"
+		uuidArray, err := rs.ManualQueryRaw(query, map[string]interface{}{"uuid": uuid, "modelRelationUid": modelRelationUid})
+		if err == nil && uuidArray != nil && len(uuidArray) > 0 {
+			where += " NONE(x IN nodes(p) WHERE x.uuid in ["
+
+			for _, v := range uuidArray {
+				where += "'" + v[0].(string) + "',"
+			}
+			where = strings.TrimSuffix(where, ",") + "])"
+		}
 	}
 	query := queryCommon + strings.TrimSuffix(strings.TrimSpace(where), "AND") + " "
 	fmt.Println(query)
@@ -93,27 +119,22 @@ func (rs ResourceService) GetResourceListPageByMap(modelUid string, pageNumber i
 	if err != nil {
 		panic(err)
 	}
-	printOut(totalRaw[0][0])
 	total := totalRaw[0][0].(int64)
 	if total <= 0 {
-		return common.PageResultVO{}
+		return &common.PageResultVO{List: []interface{}{}}
 	}
 
-	rs.ManualQuery(query+"RETURN a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit",
+	rs.ManualQuery(query+"RETURN DISTINCT a ORDER BY a.createTime ASC SKIP $skip LIMIT $limit",
 		map[string]interface{}{"modelUid": modelUid, "skip": (pageNumber - 1) * pageSize, "limit": pageSize}, srcList)
-
-	printOut(srcList)
 
 	pageResultVO := &common.PageResultVO{TotalCount: total}
 	list := make([]interface{}, 0)
 	for _, srcResource := range *srcList {
 		resource := &store.Resource{}
-		err = store.GetSession(true).LoadDepth(resource, srcResource.UUID, 2)
+		err = rs.GetSession(true).LoadDepth(resource, srcResource.UUID, 2)
 		if err != nil {
 			panic(err)
 		}
-		//vo := &common.ResourceListPageVO{}
-		//utils.SimpleConvert(vo, resource)
 		attributes := make(map[string]string)
 		for _, srcAttributeGroupIns := range resource.AttributeGroupIns {
 			for _, srcAttributeIns := range srcAttributeGroupIns.AttributeIns {
@@ -130,7 +151,7 @@ func (rs ResourceService) GetResourceListPageByMap(modelUid string, pageNumber i
 }
 
 // 不指定字段查询
-func (rs *ResourceService) GetResourceListPage(modelUid, queryValue string, pageNumber int, pageSize int) interface{} {
+func (rs *ResourceService) GetResourceListPageByQueryValue(modelUid, queryValue string, pageNumber int, pageSize int) interface{} {
 	// TODO
 	return nil
 }
@@ -160,24 +181,31 @@ func (rs *ResourceService) AddResource(body string, operator string) (interface{
 	if err != nil {
 		return nil, err
 	}
-	//printOut(bodyObj)
 
 	model := &store.Model{Uid: bodyObj.ModelUid}
 	err = rs.Neo4jDomain.Get(model, "uid", bodyObj.ModelUid)
 	if err != nil {
+		if model.UUID == "" {
+			return nil, errors.New("该模型已被删除")
+		}
 		return nil, err
 	}
 
 	// 获取模型详细
-	//fullModel := fakeGetFullModel(rs)
 	fullModel := &store.Model{}
-	_ = store.GetSession(true).LoadDepth(fullModel, model.UUID, 2)
+	err = rs.GetSession(true).LoadDepth(fullModel, model.UUID, 2)
+	if err != nil {
+		if fullModel.UUID == "" {
+			return nil, errors.New("该模型已被删除")
+		}
+		return nil, err
+	}
 
 	commonObj := &store.CommonObj{}
 	commonObj.InitCommonObj(operator)
 
 	resource := &store.Resource{ModelUid: bodyObj.ModelUid, ModelName: bodyObj.ModelName, CommonObj: *commonObj}
-	resource.Models = fullModel
+	resource.Models = model
 
 	for _, groupObj := range bodyObj.AttributeGroupIns {
 		attributeGroup := fullModel.GetAttributeGroupByUid(groupObj.Uid)
@@ -186,6 +214,10 @@ func (rs *ResourceService) AddResource(body string, operator string) (interface{
 			for _, attributeObj := range groupObj.AttributeIns {
 				attribute := attributeGroup.GetAttributeByUid(attributeObj.Uid)
 				if attribute != nil {
+					err := rs.attributeInsValueValidate(attribute, attributeObj.AttributeInsValue)
+					if err != nil {
+						return nil, err
+					}
 					attribute.AttributeCommon.Visible = true
 					attributeIns := &store.AttributeIns{
 						AttributeCommon:   attribute.AttributeCommon,
@@ -199,15 +231,253 @@ func (rs *ResourceService) AddResource(body string, operator string) (interface{
 		}
 	}
 
-	err = store.GetSession(false).SaveDepth(resource, 10)
+	err = rs.GetSession(false).SaveDepth(resource, 2)
 	return resource, err
 }
 
+func (rs *ResourceService) attributeInsValueValidate(attribute *store.Attribute, attributeInsValue string) error {
+	insValue := strings.TrimSpace(attributeInsValue)
+	// 必填
+	if attribute.Required && insValue == "" {
+		return fmt.Errorf("字段%q必填", attribute.Name)
+	}
+
+	if insValue == "" {
+		return nil
+	}
+
+	// 正则规范
+	if attribute.Regular != "" {
+		pattern, err := strconv.Unquote(`"` + attribute.Regular + `"`)
+		if err != nil {
+			fmt.Printf("Unquote%q,err%q\n ", attribute.Regular, err)
+			//return err
+		}
+		match, err := regexp.MatchString(pattern, insValue)
+		fmt.Println(attribute.Regular, pattern, insValue, match, err)
+		if err != nil {
+			return err
+		}
+		if !match {
+			return fmt.Errorf("字段%q内容%q不符合正则规范%q", attribute.Name, insValue, attribute.Regular)
+		}
+	}
+
+	// 类型:短字符,长字符,数字,浮点数,枚举,日期,时间,用户,布尔,列表
+	// 短字符：长度 256 个英文字符或 85 个中文字符
+	// 长字符：长度 2000 英文或 666 个中文字符
+	// 数字：正负整数
+	// 浮点数：可以包含小数点的数字
+	// 枚举：包含 K-V 结构的列表
+	// 日期：日期格式
+	// 时间：时间格式
+	// 用户：可以搜索【授权中心 - 用户管理】中已经录入的用户
+	// 布尔：布尔类型，常用于开关
+	// 列表：可以理解为数组类型，只包含值的列表
+	switch {
+	case attribute.ValueType == "短字符" && len(insValue) > 256:
+		return fmt.Errorf("字段%q内容%q不符合规范，短字符：长度 256 个英文字符或 85 个中文字符", attribute.Name, insValue)
+	case attribute.ValueType == "长字符" && len(insValue) > 2000:
+		return fmt.Errorf("字段%q内容不符合规范，长字符：长度 2000 英文或 666 个中文字符", attribute.Name)
+	case attribute.ValueType == "数字":
+		match, err := regexp.MatchString("^-?[0-9]*$", insValue)
+		if err != nil {
+			return err
+		}
+		if !match {
+			return fmt.Errorf("字段%q内容%q不符合%q规范", attribute.Name, insValue, "数字")
+		}
+	case attribute.ValueType == "浮点数":
+		match, err := regexp.MatchString("^(-?\\d+)(\\.\\d+)?$", insValue)
+		if err != nil {
+			return err
+		}
+		if !match {
+			return fmt.Errorf("字段%q内容%q不符合%q规范", attribute.Name, insValue, "浮点数")
+		}
+	case attribute.ValueType == "枚举":
+		if attribute.Enums != nil {
+			type enum struct {
+				Id    interface{} `json:"id"`
+				Value interface{} `json:"value"`
+			}
+			enums := make([]enum, 0)
+			err := json.Unmarshal([]byte(attribute.Enums.(string)), &enums)
+			if err != nil {
+				return err
+			}
+
+			exit := false
+			for _, item := range enums {
+				if item.Id == insValue {
+					exit = true
+					break
+				}
+			}
+			if !exit {
+				return fmt.Errorf("字段%q内容%q不在枚举值里面", attribute.Name, insValue)
+			}
+		}
+	case attribute.ValueType == "列表":
+		if attribute.ListValues != nil {
+			type list struct {
+				Value interface{} `json:"value"`
+			}
+			lists := make([]list, 0)
+			err := json.Unmarshal([]byte(attribute.ListValues.(string)), &lists)
+			if err != nil {
+				return err
+			}
+
+			exit := false
+			for _, item := range lists {
+				if item.Value == insValue {
+					exit = true
+					break
+				}
+			}
+			if !exit {
+				return fmt.Errorf("字段%q内容%q不在列表值里面", attribute.Name, insValue)
+			}
+		}
+	case attribute.ValueType == "布尔" && (insValue != "true" && insValue != "false"):
+		return fmt.Errorf("字段%q内容%q不符合%q规范", attribute.Name, insValue, "布尔")
+	case attribute.ValueType == "用户":
+	case attribute.ValueType == "日期":
+		_, err := time.Parse("2006-01-02", insValue)
+		if err != nil {
+			return fmt.Errorf("字段%q内容%q不符合%q规范", attribute.Name, insValue, "日期")
+		}
+	case attribute.ValueType == "时间":
+		_, err := time.Parse("2006-01-02 15:04:05", insValue)
+		if err != nil {
+			return fmt.Errorf("字段%q内容%q不符合%q规范", attribute.Name, insValue, "时间")
+		}
+	}
+	return nil
+}
+
+func (rs *ResourceService) UpdateResource(body string, operator string) (*store.Resource, error) {
+	fmt.Println(body)
+	bodyObj := &store.Resource{}
+	err := json.Unmarshal([]byte(body), bodyObj)
+	if err != nil {
+		return nil, err
+	}
+
+	source, err := rs.GetResourceDetail(bodyObj.UUID)
+	if err != nil {
+		return nil, err
+	}
+
+	// map: groupInsUid+attInsUid = attributeInsValue
+	attributeInsValueMap := map[string]string{}
+	for _, groupIns := range bodyObj.AttributeGroupIns {
+		for _, attIns := range groupIns.AttributeIns {
+			attributeInsValueMap[groupIns.Uid+attIns.Uid] = attIns.AttributeInsValue
+		}
+	}
+
+	// validate and update
+	// 获取创建模板
+	modelService := ModelService{}
+	resourceTemplate, err := modelService.GetModelDetail(source.ModelUid)
+	if err != nil {
+		return nil, err
+	}
+	// validate
+	for _, group := range resourceTemplate.AttributeGroups {
+		for _, att := range group.Attributes {
+			v, ok := attributeInsValueMap[group.Uid+att.Uid]
+			if ok {
+				err := rs.attributeInsValueValidate(att, v)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	// update
+	for _, sourceGroupIns := range source.AttributeGroupIns {
+		for _, sourceAttIns := range sourceGroupIns.AttributeIns {
+			v, ok := attributeInsValueMap[sourceGroupIns.Uid+sourceAttIns.Uid]
+			if ok {
+				sourceAttIns.AttributeInsValue = v
+				sourceAttIns.UpdateTime = time.Now().Unix()
+				sourceAttIns.Editor = operator
+			}
+		}
+	}
+	// 如果有新增的属性
+	commonObj := &store.CommonObj{}
+	commonObj.InitCommonObj(operator)
+	for _, attributeGroupObj := range bodyObj.AttributeGroupIns {
+		exits := false
+		for _, sourceGroupIns := range source.AttributeGroupIns {
+			if sourceGroupIns.Uid == attributeGroupObj.Uid {
+				// 继续检测属性
+				for _, attributeObj := range attributeGroupObj.AttributeIns {
+					attributeObjExits := false
+					for _, sourceAttributeIns := range sourceGroupIns.AttributeIns {
+						if sourceAttributeIns.Uid == attributeObj.Uid {
+							attributeObjExits = true
+							break
+						}
+					}
+					if !attributeObjExits {
+						newAttributeIns := getNewAttributeFromTemplate(resourceTemplate, attributeObj.Uid)
+						newAttributeIns.CommonObj = *commonObj
+						newAttributeIns.AttributeInsValue = attributeObj.AttributeInsValue
+						sourceGroupIns.AddAttributeIns(newAttributeIns)
+					}
+				}
+				exits = true
+				break
+			}
+		}
+		// 新的分组
+		if !exits {
+			newGroupIns := &store.AttributeGroupIns{Uid: attributeGroupObj.Uid, Name: attributeGroupObj.Name}
+			for _, attributeObj := range attributeGroupObj.AttributeIns {
+				newAttributeIns := getNewAttributeFromTemplate(resourceTemplate, attributeObj.Uid)
+				newAttributeIns.CommonObj = *commonObj
+				newAttributeIns.AttributeInsValue = attributeObj.AttributeInsValue
+				newGroupIns.AddAttributeIns(newAttributeIns)
+			}
+			source.AddAttributeGroupIns(newGroupIns)
+		}
+	}
+
+	source.Editor = operator
+	source.UpdateTime = time.Now().Unix()
+	err = rs.GetSession(false).SaveDepth(source, 2)
+	return source, err
+}
+
+func getNewAttributeFromTemplate(temp *store.Model, uid string) *store.AttributeIns {
+	for _, groupIns := range temp.AttributeGroups {
+		for _, attribute := range groupIns.Attributes {
+			if attribute.Uid == uid {
+				newIns := &store.AttributeIns{}
+				utils.SimpleConvert(newIns, attribute)
+				newIns.AttributeGroupIns = nil
+				newIns.BaseNode = gogm.BaseNode{}
+				return newIns
+			}
+		}
+	}
+	return nil
+}
+
 // 获取资源详情
-func (rs *ResourceService) GetResourceDetail(uuid string) (interface{}, error) {
+func (rs *ResourceService) GetResourceDetail(uuid string) (*store.Resource, error) {
 	r := &store.Resource{}
 	err := rs.Neo4jDomain.Get(r, "uuid", uuid)
 	if err != nil {
+		if r.UUID == "" {
+			return nil, fmt.Errorf("资源已被删除")
+		}
 		return nil, err
 	}
 
@@ -243,7 +513,7 @@ func (rs *ResourceService) UpdateResourceAttribute(uuid string, attributeInsValu
 	if len(a.Regular) > 0 {
 		match, _ := regexp.MatchString(a.Regular, attributeInsValue)
 		if !match {
-			return errors.New("内容不符合正则规范")
+			return errors.New("内容不符合正则规范:" + a.Regular)
 		}
 	}
 

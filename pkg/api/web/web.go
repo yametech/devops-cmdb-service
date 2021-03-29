@@ -1,7 +1,6 @@
 package web
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
@@ -20,12 +19,9 @@ func filterMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// 打印日志
 		//start := time.Now()
-		rawData, _ := c.GetRawData()
-		fmt.Printf("%v,  \"%v\",   %v  \n", c.Request.Method, c.Request.RequestURI, string(rawData))
-
 		// 用户信息存储
 		//c.Set("user", "中间件")
-		c.Set("body", string(rawData))
+		c.Set("userName", c.GetHeader("x-wrapper-username"))
 		c.Next()
 		//end := time.Now()
 		//latency := end.Sub(start)
@@ -79,6 +75,10 @@ func NewServer(apiServer api.IApiServer) *Server {
 	// relation
 	relation := &RelationshipApi{&service.RelationService{}}
 	relation.router(apiServer.GINEngine())
+
+	// ldap
+	ldap := &LdapApi{}
+	ldap.router(apiServer.GINEngine())
 
 	return server
 }

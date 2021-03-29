@@ -3,9 +3,9 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mindstand/gogm"
 	"github.com/stretchr/testify/assert"
 	"github.com/yametech/devops-cmdb-service/pkg/api"
+	"github.com/yametech/devops-cmdb-service/pkg/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/service"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
@@ -51,7 +51,8 @@ func TestRelation(t *testing.T) {
 	// query := "match (a:Model)-[r:Relation]-(b:Model) where r.uid = 'host_belong_cabinet' return distinct  r "
 	query := "match (a:Model)-[r:Relation]-(b:Model) where a.uid = $modelUid or b.uid = $modelUid return distinct  r"
 
-	session := store.GetSession(true)
+	service := service.ModelService{}
+	session := service.Neo4jDomain.GetSession(true)
 	//relation := store.Relation{}
 	result, _ := session.QueryRaw(query, map[string]interface{}{"modelUid": "hostss"})
 	//fmt.Printf("%T\n", result[0][0])
@@ -76,20 +77,15 @@ func TestRelation(t *testing.T) {
 
 func TestMyTest(t *testing.T) {
 
-	attributeService := service.AttributeService{}
-	attribute := &[]*store.Attribute{}
-	// CREATE (:User {email: $email, username: $username, password: $password})
-	properties := map[string]interface{}{
-		"modelUid": "jigui",
-	}
-	err := attributeService.ManualQuery("MATCH (a:Attribute {modelUid: $modelUid}) RETURN a", properties, attribute)
-	printOut(err)
-	printOut(attribute)
+	//re := service.ModelService{}
+	//
+	//detail, err := re.GetModelDetail("room")
+	//printOut(detail)
+	//printOut(err.Error())
 
-	attributeGroups := &[]*store.AttributeGroup{}
-	query := "MATCH (a:Model {uuid: $uuid})-[]-(b:AttributeGroup) RETURN b"
-	_ = attributeService.ManualQuery(query, map[string]interface{}{"uuid": "c558b119-2848-4eb3-905d-989967d8c9f7"}, attributeGroups)
-	printOut(attributeGroups)
+	rs := service.RelationService{}
+	result, err := rs.GetResourceRelationsByModelRelationUid("host_belong_room")
+	fmt.Println(result, err)
 
 }
 
@@ -107,12 +103,14 @@ func TestRouter(t *testing.T) {
 }
 
 func TestGetModel(t *testing.T) {
-	session := store.GetSession(true)
+	service := service.ModelService{}
+	session := service.GetSession(true)
 
 	model := &[]store.Model{}
 	err := session.LoadAllDepth(model, 2)
 	if err != nil {
-		panic(err)
+		//panic(err)
+		printOut(err)
 	}
 
 	marshal, _ := json.Marshal((*model)[0])
@@ -122,8 +120,9 @@ func TestGetModel(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
+	baseService := service.Service{}
 	// init
-	session := store.GetSession(false)
+	session := baseService.GetSession(false)
 	err := session.PurgeDatabase()
 	if err != nil {
 		panic(err)
@@ -180,7 +179,7 @@ func TestInit(t *testing.T) {
 	resource1 := resourceResult.(*store.Resource)
 	resource2 := resourceResult2.(*store.Resource)
 	resource3 := resourceResult3.(*store.Resource)
-	relationshipService.AddModelRelation("{\"relationshipUid\":\"belong\",\"constraint\":\"N - N\",\"sourceUid\":\"cabinet\",\"targetUid\":\"host\",\"comment\":\"描述信息\"}", "")
+	//relationshipService.AddModelRelation("{\"relationshipUid\":\"belong\",\"constraint\":\"N - N\",\"sourceUid\":\"cabinet\",\"targetUid\":\"host\",\"comment\":\"描述信息\"}", "")
 
 	relationshipService.AddResourceRelation(resource1.UUID, resource2.UUID, "host_belong_cabinet")
 	relationshipService.AddResourceRelation(resource3.UUID, resource2.UUID, "host_belong_cabinet")

@@ -3,10 +3,11 @@ package store
 import (
 	"fmt"
 	dsl "github.com/mindstand/go-cypherdsl"
-	"github.com/mindstand/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/core"
+	"github.com/yametech/devops-cmdb-service/pkg/gogm"
+	"github.com/yametech/devops-cmdb-service/pkg/utils"
+	"io"
 	"reflect"
-	"time"
 )
 
 type IStore interface {
@@ -18,15 +19,19 @@ type IStore interface {
 	Delete(core.IObject) error
 }
 
-func Neo4jInit(host string, username string, password string) {
+var db *Neo4jDomain
+
+func Neo4jInit(neo4jUri, neo4jUsername, neo4jPassword string) {
+	//return &Neo4jDomain{Driver: driver(neo4jUri, neo4j.BasicAuth(neo4jUsername, neo4jPassword, ""))}
 	config := &gogm.Config{
-		IndexStrategy: gogm.VALIDATE_INDEX, //other options are ASSERT_INDEX and IGNORE_INDEX
-		PoolSize:      500,
+		IndexStrategy: gogm.ASSERT_INDEX, //other options are ASSERT_INDEX and IGNORE_INDEX
+		PoolSize:      200,
 		Port:          7687,
 		IsCluster:     false, //tells it whether or not to use `bolt+routing`
-		Host:          host,
-		Username:      username,
-		Password:      password,
+		Host:          neo4jUri,
+		Username:      neo4jUsername,
+		Password:      neo4jPassword,
+		LogLevel:      "DEBUG",
 	}
 
 	err := gogm.Init(config,
@@ -36,28 +41,24 @@ func Neo4jInit(host string, username string, password string) {
 	if err != nil {
 		panic(err)
 	}
-}
 
-func GetSession(readonly bool) *gogm.Session {
-	//param is readonly, we're going to make stuff so we're going to do read write
-	sess, err := gogm.NewSession(readonly)
-	//sess, err := gogm.NewSessionWithConfig(gogm.SessionConfig{DatabaseName:"cmdb"})
+	readPool, err := utils.NewGenericPool(5, 100, 10, func() (io.Closer, error) {
+		return gogm.NewSession(true)
+	})
+	if err != nil {
+		panic(err)
+	}
+	writePool, err := utils.NewGenericPool(5, 100, 10, func() (io.Closer, error) {
+		return gogm.NewSession(false)
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	//close the session
-	defer func() {
-		start := time.Now()
-		if e := sess.Close(); e != nil {
-			fmt.Println("close the session err：", e)
-		}
-		end := time.Now()
-		latency := end.Sub(start)
-		fmt.Println("close the session finished cost:", latency)
-	}()
-
-	return sess
+	db = &Neo4jDomain{
+		read:  readPool,
+		write: writePool,
+	}
 }
 
 type INeo4j interface {
@@ -69,12 +70,25 @@ type INeo4j interface {
 }
 
 type Neo4jDomain struct {
-	// neo4j node id
-	Id string
-	// gogm中间件主键
-	Uuid string
-	// cmdb主键
-	Uid string
+	read  *utils.GenericPool
+	write *utils.GenericPool
+}
+
+func (domain *Neo4jDomain) GetSession(readonly bool) *gogm.Session {
+	var session io.Closer
+	var err error
+	if readonly {
+		session, err = db.read.Acquire()
+		defer db.read.Release(session)
+	} else {
+		session, err = db.write.Acquire()
+		defer db.write.Release(session)
+	}
+	if err != nil {
+		panic(err)
+	}
+
+	return session.(*gogm.Session)
 }
 
 func (domain *Neo4jDomain) Get(respObj interface{}, key string, value interface{}) error {
@@ -86,21 +100,21 @@ func (domain *Neo4jDomain) Get(respObj interface{}, key string, value interface{
 		ToCypher()
 
 	fmt.Println(cypher)
-	return GetSession(true).Query(cypher, nil, respObj)
+	return domain.GetSession(true).Query(cypher, nil, respObj)
 }
 
 func (domain *Neo4jDomain) List(respObj interface{}) error {
-	return GetSession(true).LoadAll(respObj)
+	return domain.GetSession(true).LoadAll(respObj)
 }
 
 func (domain *Neo4jDomain) Save(respObj interface{}) error {
-	return GetSession(false).Save(respObj)
+	return domain.GetSession(false).Save(respObj)
 }
 
 func (domain *Neo4jDomain) Update(respObj interface{}) error {
-	return GetSession(false).Save(respObj)
+	return domain.GetSession(false).Save(respObj)
 }
 
 func (domain *Neo4jDomain) Delete(respObj interface{}) error {
-	return GetSession(false).Delete(respObj)
+	return domain.GetSession(false).Delete(respObj)
 }

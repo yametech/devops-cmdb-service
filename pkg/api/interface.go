@@ -10,7 +10,7 @@ type IApiServer interface {
 	GINEngine() *gin.Engine
 }
 
-var _ IApiServer = &BaseServer{}
+//var _ IApiServer = &BaseServer{}
 
 type BaseServer struct {
 	addrs []string

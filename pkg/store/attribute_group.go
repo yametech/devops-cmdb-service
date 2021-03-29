@@ -1,12 +1,12 @@
 package store
 
 import (
-	"github.com/mindstand/gogm"
+	"github.com/yametech/devops-cmdb-service/pkg/gogm"
 )
 
 type AttributeGroup struct {
 	gogm.BaseNode
-	Uid        string       `json:"uid" gogm:"name=uid"`
+	Uid        string       `json:"uid" gogm:"index;name=uid"`
 	Name       string       `json:"name" gogm:"name=name"`
 	ModelUid   string       `json:"modelUid" gogm:"index;name=modelUid"`
 	Model      *Model       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`

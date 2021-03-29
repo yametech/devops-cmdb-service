@@ -1,22 +1,18 @@
 package store
 
 import (
-	"github.com/mindstand/gogm"
+	"github.com/yametech/devops-cmdb-service/pkg/gogm"
 )
 
 type AttributeGroupIns struct {
 	gogm.BaseNode
 	Uid          string          `json:"uid" gogm:"name=uid"`
 	Name         string          `json:"name" gogm:"name=name"`
-	ModelUid     string          `json:"modelUid" gogm:"name=modelUid"`
+	ModelUid     string          `json:"modelUid" gogm:"index;name=modelUid"`
 	Resource     *Resource       `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
 	AttributeIns []*AttributeIns `json:"attributeIns" gogm:"direction=incoming;relationship=GroupBy"`
 	CommonObj
 }
-
-/*func (obj *AttributeGroupIns) Save() error {
-	return GetSession(false).Save(obj)
-}*/
 
 func (obj *AttributeGroupIns) AddAttributeIns(target *AttributeIns) {
 

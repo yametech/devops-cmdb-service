@@ -4,23 +4,48 @@ import (
 	"errors"
 	"fmt"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
+	"github.com/yametech/devops-cmdb-service/pkg/gogm"
 	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"github.com/yametech/devops-cmdb-service/pkg/utils"
-	"strconv"
-	"sync"
+	"regexp"
+	"strings"
 	"time"
 )
 
 type ModelService struct {
 	Service
-	store.Neo4jDomain
-	mutex sync.Mutex
 }
 
-func (ms *ModelService) GetAllModelGroup() (*[]store.ModelGroup, error) {
-	modelGroups := make([]store.ModelGroup, 0)
-	err := store.GetSession(true).LoadAllDepth(&modelGroups, 2)
-	return &modelGroups, err
+func (ms *ModelService) GetAllModelGroup() ([]*store.ModelGroup, error) {
+	modelGroups := make([]*store.ModelGroup, 0)
+	query := "MATCH (a:ModelGroup) RETURN a ORDER BY a.createTime ASC"
+	result, err := ms.ManualQueryRaw(query, nil)
+
+	for _, row := range result {
+		modelGroup := &store.ModelGroup{}
+		nodeWrap := row[0].(*gogm.NodeWrap)
+		utils.SimpleConvert(modelGroup, &nodeWrap.Props)
+
+		models := make([]*store.Model, 0)
+		query = "MATCH (a:ModelGroup {uuid: $uuid})<-[]-(b:Model) RETURN b ORDER BY b.createTime ASC"
+		_ = ms.ManualQuery(query, map[string]interface{}{"uuid": modelGroup.UUID}, &models)
+		modelGroup.Models = models
+		addModelGroup(&modelGroups, modelGroup)
+	}
+
+	return modelGroups, err
+}
+
+func addModelGroup(self *[]*store.ModelGroup, target *store.ModelGroup) {
+	for _, group := range *self {
+		if group.Uid == target.Uid {
+			for _, model := range target.Models {
+				group.AddModel(model)
+			}
+			return
+		}
+	}
+	*self = append(*self, target)
 }
 
 func (ms *ModelService) GetModelGroup(uuid string) (*store.ModelGroup, error) {
@@ -31,10 +56,62 @@ func (ms *ModelService) GetModelGroup(uuid string) (*store.ModelGroup, error) {
 	return modelGroup, nil
 }
 
+func (ms *ModelService) DeleteModelGroup(uuid string) error {
+	modelGroup := &store.ModelGroup{}
+	if err := ms.Neo4jDomain.Get(modelGroup, "uuid", uuid); err != nil {
+		if modelGroup.UUID == "" {
+			return errors.New("模型分组已被删除")
+		}
+		return err
+	}
+
+	ms.GetSession(true).LoadDepth(modelGroup, uuid, 1)
+	if len(modelGroup.Models) > 0 {
+		return errors.New("此分组下存在模型，不可删除")
+	}
+
+	if err := ms.GetSession(false).DeleteUUID(uuid); err != nil {
+		return err
+	}
+	return nil
+}
+
+func UidNameValidate(uid, name string) error {
+	uid = strings.TrimSpace(uid)
+	regexpUid := "^[a-z]([_a-z0-9]{0,29})$"
+	match, err := regexp.MatchString(regexpUid, uid)
+	if err != nil {
+		return err
+	}
+	if !match {
+		return fmt.Errorf("唯一标识%q不符合规范: 小写英文开头，下划线，数字，小写英文的组合，且长度不超过30位", uid)
+	}
+
+	name = strings.TrimSpace(name)
+	if len(name) < 1 || len([]rune(name)) > 10 {
+		return fmt.Errorf("名称%q不符合规范：长度不超过10位", name)
+	}
+
+	return nil
+}
+
 func (ms *ModelService) CreateModelGroup(vo *common.AddModelGroupVO, operator string) (*store.ModelGroup, error) {
+	vo.Uid = strings.TrimSpace(vo.Uid)
+	vo.Name = strings.TrimSpace(vo.Name)
+	// validate
+	if err := UidNameValidate(vo.Uid, vo.Name); err != nil {
+		return nil, err
+	}
+
+	ms.mutex.Lock()
+	ms.mutex.Unlock()
 	modelGroup := &store.ModelGroup{}
 	if err := ms.Neo4jDomain.Get(modelGroup, "uid", vo.Uid); err == nil {
-		return nil, fmt.Errorf("已存在uid是%s的模型分组", vo.Uid)
+		return nil, fmt.Errorf("已存在唯一标识是%q的模型分组", vo.Uid)
+	}
+
+	if err := ms.Neo4jDomain.Get(modelGroup, "name", vo.Name); err == nil {
+		return nil, fmt.Errorf("已存在名称是%q的模型分组", vo.Name)
 	}
 
 	utils.SimpleConvert(modelGroup, vo)
@@ -53,7 +130,7 @@ func (ms *ModelService) UpdateModelGroup(vo *common.AddModelGroupVO, operator st
 		return nil, err
 	}
 
-	modelGroup.Name = vo.Name
+	modelGroup.Name = strings.TrimSpace(vo.Name)
 	modelGroup.UpdateTime = time.Now().Unix()
 	modelGroup.CommonObj.Editor = operator
 
@@ -62,15 +139,32 @@ func (ms *ModelService) UpdateModelGroup(vo *common.AddModelGroupVO, operator st
 }
 
 func (ms *ModelService) CreateModel(vo *common.AddModelVO, operator string) (*store.Model, error) {
+	vo.ModelGroupUUID = strings.TrimSpace(vo.ModelGroupUUID)
+	vo.Uid = strings.TrimSpace(vo.Uid)
+	vo.Name = strings.TrimSpace(vo.Name)
+	// validate
+	if err := UidNameValidate(vo.Uid, vo.Name); err != nil {
+		return nil, err
+	}
+
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
 	model := &store.Model{}
 	if err := ms.Neo4jDomain.Get(model, "uid", vo.Uid); err == nil {
-		return nil, fmt.Errorf("已存在uid是%s的模型", vo.Uid)
+		return nil, fmt.Errorf("已存在唯一标识是%q的模型", vo.Uid)
+	}
+
+	if err := ms.Neo4jDomain.Get(model, "name", vo.Name); err == nil {
+		return nil, fmt.Errorf("已存在名称是%q的模型", vo.Name)
 	}
 
 	utils.SimpleConvert(model, vo)
 
 	modelGroup := &store.ModelGroup{}
 	if err := ms.Neo4jDomain.Get(modelGroup, "uuid", vo.ModelGroupUUID); err != nil {
+		if modelGroup.UUID == "" {
+			return nil, errors.New("对应模型分组已被删除")
+		}
 		return nil, err
 	}
 
@@ -82,10 +176,49 @@ func (ms *ModelService) CreateModel(vo *common.AddModelVO, operator string) (*st
 	return model, err
 }
 
+func (ms *ModelService) UpdateModel(vo *common.UpdateModelVO, operator string) error {
+	ms.mutex.Lock()
+	defer ms.mutex.Unlock()
+
+	models := make([]store.Model, 0)
+	vo.Name = strings.TrimSpace(vo.Name)
+	err := ms.Get(&models, "name", vo.Name)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	if len(models) > 1 {
+		return errors.New("已存在该名称的模型")
+	}
+	if len(models) == 1 {
+		if models[0].UUID != vo.UUID {
+			return errors.New("已存在该名称的模型")
+		} else {
+			return nil
+		}
+	}
+
+	model := &store.Model{}
+	err = ms.Get(model, "uuid", vo.UUID)
+	if err != nil {
+		if model.UUID == "" {
+			return errors.New("模型已被删除")
+		}
+		return err
+	}
+	model.Name = vo.Name
+	model.UpdateTime = time.Now().Unix()
+	model.Editor = operator
+	return ms.Update(model)
+}
+
 func (ms *ModelService) DeleteModel(uuid, operator string) error {
 	model := &store.Model{}
 	err := ms.Neo4jDomain.Get(model, "uuid", uuid)
 	if err != nil {
+		if model.UUID == "" {
+			return errors.New("模型分组已被删除")
+		}
 		return err
 	}
 
@@ -99,57 +232,68 @@ func (ms *ModelService) DeleteModel(uuid, operator string) error {
 	return ms.Neo4jDomain.Delete(model)
 }
 
-func (ms *ModelService) GetModelList(limit string, pageNumber string) (*[]store.Model, error) {
-	limitInt, err := strconv.Atoi(limit)
-	if err != nil || limitInt < 0 {
-		return nil, err
+func (ms *ModelService) GetSimpleModelList() ([]*store.Model, error) {
+	allModel := make([]*store.Model, 0)
+	query := fmt.Sprintf("match (a:Model) return a ORDER BY a.createTime ASC")
+	properties := map[string]interface{}{}
+	if err := ms.GetSession(true).Query(query, properties, &allModel); err != nil {
+		return allModel, err
 	}
-	pageNumberInt, err := strconv.Atoi(pageNumber)
-	if err != nil || pageNumberInt < 0 {
-		return nil, err
-	}
-	allModel := make([]store.Model, 0)
-	query := fmt.Sprintf("match (a:Model) return a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit")
-	properties := map[string]interface{}{
-		"skip":  (pageNumberInt - 1) * limitInt,
-		"limit": limitInt,
-	}
-	if err := store.GetSession(true).Query(query, properties, &allModel); err != nil {
-		return nil, err
-	}
-	return &allModel, nil
+	return allModel, nil
 }
 
 func (ms *ModelService) GetModel(uuid string) (*store.Model, error) {
 	model := &store.Model{}
-	err := ms.Neo4jDomain.Get(model, "uuid", uuid)
+	err := ms.Get(model, "uuid", uuid)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("该模型已被删除")
 	}
 
 	attributeGroups := &[]*store.AttributeGroup{}
-	query := "MATCH (a:Model {uuid: $uuid})-[]-(b:AttributeGroup) RETURN b"
+	query := "MATCH (a:Model {uuid: $uuid})-[]-(b:AttributeGroup) RETURN b ORDER BY b.createTime ASC"
 	_ = ms.ManualQuery(query, map[string]interface{}{"uuid": uuid}, attributeGroups)
 
 	model.AttributeGroups = *attributeGroups
 
 	for _, ag := range *attributeGroups {
 		attributes := &[]*store.Attribute{}
-		query = "MATCH (a:AttributeGroup {uuid: $uuid})-[]-(b:Attribute) RETURN b"
+		query = "MATCH (a:AttributeGroup {uuid: $uuid})-[]-(b:Attribute) RETURN b ORDER BY b.createTime ASC"
 		_ = ms.ManualQuery(query, map[string]interface{}{"uuid": ag.UUID}, attributes)
 		ag.Attributes = *attributes
 	}
 	return model, err
 }
 
-func (ms *ModelService) GetRelationshipList(pageSize, pageNumber int) (*[]store.RelationshipModel, error) {
-	allModel := make([]store.RelationshipModel, 0)
-	query := fmt.Sprintf("match (a:RelationshipModel) return a ORDER BY a.createTime DESC SKIP $skip LIMIT $limit")
+func (ms *ModelService) GetModelDetail(uid string) (*store.Model, error) {
+	model := &store.Model{}
+	err := ms.Get(model, "uid", uid)
+	if err != nil {
+		return nil, errors.New("该模型已被删除")
+	}
+
+	attributeGroups := &[]*store.AttributeGroup{}
+	query := "MATCH (a:Model {uid: $uid})-[]-(b:AttributeGroup) RETURN b ORDER BY b.createTime ASC"
+	_ = ms.ManualQuery(query, map[string]interface{}{"uid": uid}, attributeGroups)
+
+	model.AttributeGroups = *attributeGroups
+
+	for _, ag := range *attributeGroups {
+		attributes := &[]*store.Attribute{}
+		query = "MATCH (a:AttributeGroup {uuid: $uuid})-[]-(b:Attribute) RETURN b ORDER BY b.createTime ASC"
+		_ = ms.ManualQuery(query, map[string]interface{}{"uuid": ag.UUID}, attributes)
+		ag.Attributes = *attributes
+	}
+	return model, err
+}
+
+func (ms *ModelService) GetRelationshipList(pageSize, pageNumber int) ([]*store.RelationshipModel, error) {
+	allModel := make([]*store.RelationshipModel, 0)
+	query := fmt.Sprintf("match (a:RelationshipModel) return a ORDER BY a.createTime ASC SKIP $skip LIMIT $limit")
 	properties := map[string]interface{}{
 		"skip":  (pageNumber - 1) * pageSize,
 		"limit": pageSize,
 	}
-	if err := store.GetSession(true).Query(query, properties, &allModel); err != nil {
+	if err := ms.GetSession(true).Query(query, properties, &allModel); err != nil {
 		return nil, err
 	}
 	// get all ModelRelation, count the Relationship usage
@@ -158,12 +302,12 @@ func (ms *ModelService) GetRelationshipList(pageSize, pageNumber int) (*[]store.
 	for _, model := range allModel {
 		for _, relation := range *relations {
 			if relation.RelationshipUid == model.Uid {
-				model.Usage += 1
+				model.CurrentUsage += 1
 			}
 		}
 	}
 
-	return &allModel, nil
+	return allModel, nil
 }
 
 func (ms *ModelService) GetRelationship(uuid string) (*store.RelationshipModel, error) {
@@ -174,16 +318,49 @@ func (ms *ModelService) GetRelationship(uuid string) (*store.RelationshipModel, 
 	return relationship, nil
 }
 
-func (ms *ModelService) SaveRelationship(relation *store.RelationshipModel) error {
-
-	err := ms.Neo4jDomain.Save(relation)
-	if err != nil {
-		return err
+func (ms *ModelService) SaveRelationship(vo *common.CreateRelationshipModelVO, operator string) (*store.RelationshipModel, error) {
+	vo.Name = strings.TrimSpace(vo.Name)
+	vo.Uid = strings.TrimSpace(vo.Uid)
+	vo.Source2Target = strings.TrimSpace(vo.Source2Target)
+	vo.Target2Source = strings.TrimSpace(vo.Target2Source)
+	// validate
+	if err := UidNameValidate(vo.Uid, vo.Name); err != nil {
+		return nil, err
 	}
-	return nil
+
+	if len([]rune(vo.Source2Target)) > 5 || len([]rune(vo.Source2Target)) < 1 {
+		return nil, fmt.Errorf("%q不满足位数限制", vo.Source2Target)
+	}
+
+	if len([]rune(vo.Target2Source)) > 5 || len([]rune(vo.Target2Source)) < 1 {
+		return nil, fmt.Errorf("%q不满足位数限制", vo.Target2Source)
+	}
+
+	exist := &store.RelationshipModel{}
+	err := ms.Neo4jDomain.Get(exist, "uid", vo.Uid)
+	if err == nil {
+		return nil, fmt.Errorf("已存在唯一标识是%q的关系模型", vo.Uid)
+	}
+
+	err = ms.Neo4jDomain.Get(exist, "name", vo.Name)
+	if err == nil {
+		return nil, fmt.Errorf("已存在名称是%q的关系模型", vo.Name)
+	}
+
+	relationship := &store.RelationshipModel{}
+	utils.SimpleConvert(relationship, vo)
+	commonObj := &store.CommonObj{}
+	commonObj.InitCommonObj(operator)
+	relationship.CommonObj = *commonObj
+
+	err = ms.Neo4jDomain.Save(relationship)
+	if err != nil {
+		return nil, err
+	}
+	return relationship, nil
 }
 
-func (ms *ModelService) UpdateRelationship(vo *common.RelationshipModelUpdateVO, operator string) error {
+func (ms *ModelService) UpdateRelationship(vo *common.UpdateRelationshipModelVO, operator string) error {
 	relation := &store.RelationshipModel{}
 
 	ms.mutex.Lock()
@@ -212,12 +389,14 @@ func (ms *ModelService) DeleteRelationship(uuid string) error {
 		return err
 	}
 	// if the Relationship has been used, deny operation
-	relationService := RelationService{}
-	relations := relationService.GetAllModelRelations()
-	for _, relation := range *relations {
-		if relation.RelationshipUid == relationshipModel.Uid {
-			return errors.New("该关系模型已被使用，禁止删除")
-		}
+	query := "match (a:Model)-[r:Relation]-(b:Model) where r.relationshipUid = $relationshipUid return COUNT(distinct r)"
+	count, err := ms.ManualQueryRaw(query, map[string]interface{}{"relationshipUid": relationshipModel.Uid})
+	if err != nil {
+		return err
 	}
+	if count[0][0].(int64) > 0 {
+		return errors.New("该关系模型已被使用，禁止删除")
+	}
+
 	return ms.Neo4jDomain.Delete(relationshipModel)
 }

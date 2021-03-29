@@ -1,11 +1,11 @@
 ## 分组名称
-> 模型管理
+> 资源管理
 
 ## 接口名称
-> 属性添加
+> ldap用户列表
 
 ## 接口描述
-> 添加属性
+> ldap用户列表
 
 ## 接口版本
 
@@ -13,10 +13,10 @@
 
 ##### HTTP请求方式
 
-> POST
+> GET
 
 ##### 接口路径
-> /cmdb/web/model/attribute-add
+> /cmdb/web/ldap/user-list
 
 ##### 请求头参数
 > | 参数       | 必填 | 描述            |
@@ -38,30 +38,12 @@
 ##### Query参数
 > | 参数       | 必填 | 描述            |
 > | ---------- | :--- |  --------------- |
-> | modelUid |true|string|模型唯一标识|
-> | Attributegroupuuid |true|string|属性分组全局唯一id|
-> | uid |true|string|唯一标识|
-> | name |true|string|名称|
-> | valueType |true|string|类型|
-> | editable |true|boolean|是否可编辑，true-是，false-否|
-> | required |true|boolean|是否必填，true-是，false-否|
-> | regular |true|string|正则内容|
-> | comment |true|string|描述说明|
+
 
 
 ##### Query参数样例
 ```
-{
-    "uid": "ip",
-    "name": "网址",
-    "valueType": "短字符串",
-    "editable": true,
-    "required": false,
-    "regular": "(([01]{0,1}\\d{0,1}\\d|2[0-4]\\d|25[0-5])\\.){3}([01]{0,1}\\d{0,1}\\d|2[0-4]\\d|25[0-5])",
-    "comment": "网址信息",
-    "modelUId": "host",
-    "Attributegroupuuid": "baseInfo"
-}
+
 ```
 
 ##### 响应头参数
@@ -72,7 +54,11 @@
 > | 参数       | 必选 | 类型 | 说明            |
 > | ---------- | :--- | :--- | --------------- |
 > | code |true|Integer|状态码|
-> | data |true|list|返回数据|
+> | data |true|map|返回数据|
+> | data.totalCount |true|int|总数|
+> | data.list |true|list|用户列表|
+> | data.list.uid |true|String|用户uid|
+> | data.list.name |true|String|用户名称|
 > | message |true|String| |
 
 
@@ -80,7 +66,13 @@
 ```
 {
     "data": {
-        
+        "totalCount": 1,
+        "list": [
+            {
+                "uid": "xx",
+                "name": "试试"
+            }
+        ]
     },
     "code": 200,
     "msg": ""

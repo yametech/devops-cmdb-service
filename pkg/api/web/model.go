@@ -7,17 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
-	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"strconv"
 	"strings"
 )
 
 func (s *Server) getAllGroup(ctx *gin.Context) {
 	allMG, _ := s.ModelService.GetAllModelGroup()
-	//if err != nil {
-	//	api.RequestErr(ctx, err)
-	//	return
-	//}
 	api.RequestOK(ctx, allMG)
 }
 
@@ -45,7 +40,7 @@ func (s *Server) createGroup(ctx *gin.Context) {
 	modelGroupVO.Uid = strings.TrimSpace(modelGroupVO.Uid)
 	modelGroupVO.Name = strings.TrimSpace(modelGroupVO.Name)
 
-	result, err := s.ModelService.CreateModelGroup(modelGroupVO, "")
+	result, err := s.ModelService.CreateModelGroup(modelGroupVO, ctx.GetHeader("x-wrapper-username"))
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -61,7 +56,7 @@ func (s *Server) putGroup(ctx *gin.Context) {
 	}
 	modelGroupVO.Name = strings.TrimSpace(modelGroupVO.Name)
 
-	result, err := s.ModelService.UpdateModelGroup(modelGroupVO, "")
+	result, err := s.ModelService.UpdateModelGroup(modelGroupVO, ctx.GetHeader("x-wrapper-username"))
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -70,15 +65,21 @@ func (s *Server) putGroup(ctx *gin.Context) {
 }
 
 func (s *Server) deleteGroup(ctx *gin.Context) {
-	// TODO
+	idVO := &common.IdVO{}
+	if err := ctx.BindJSON(idVO); err != nil || idVO.UUID == "" {
+		api.RequestErr(ctx, errors.New("参数异常"))
+		return
+	}
+	err := s.DeleteModelGroup(idVO.UUID)
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
 	api.RequestOK(ctx, "")
 }
 
 func (s *Server) getAllModel(ctx *gin.Context) {
-	limit := ctx.DefaultQuery("page_size", "10")
-	pageNumber := ctx.DefaultQuery("page_number", "1")
-
-	allModel, err := s.ModelService.GetModelList(limit, pageNumber)
+	allModel, err := s.ModelService.GetSimpleModelList()
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -115,7 +116,7 @@ func (s *Server) createModel(ctx *gin.Context) {
 	vo.Uid = strings.TrimSpace(vo.Uid)
 	vo.Name = strings.TrimSpace(vo.Name)
 
-	result, err := s.ModelService.CreateModel(vo, "")
+	result, err := s.ModelService.CreateModel(vo, ctx.GetHeader("x-wrapper-username"))
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -124,7 +125,16 @@ func (s *Server) createModel(ctx *gin.Context) {
 }
 
 func (s *Server) putModel(ctx *gin.Context) {
-	// TODO
+	vo := &common.UpdateModelVO{}
+	if err := ctx.ShouldBindJSON(vo); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	err := s.ModelService.UpdateModel(vo, ctx.GetHeader("x-wrapper-username"))
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
 	api.RequestOK(ctx, "")
 }
 
@@ -135,7 +145,7 @@ func (s *Server) deleteModel(ctx *gin.Context) {
 		return
 	}
 
-	err := s.ModelService.DeleteModel(idVO.UUID, "")
+	err := s.ModelService.DeleteModel(idVO.UUID, ctx.GetHeader("x-wrapper-username"))
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -144,8 +154,8 @@ func (s *Server) deleteModel(ctx *gin.Context) {
 }
 
 func (s *Server) getAllRelationship(ctx *gin.Context) {
-	limit := ctx.DefaultQuery("page_size", "10")
-	pageNumber := ctx.DefaultQuery("page_number", "1")
+	limit := ctx.DefaultQuery("pageSize", "10000")
+	pageNumber := ctx.DefaultQuery("current", "1")
 	limitInt, err := strconv.Atoi(limit)
 	if err != nil || limitInt < 0 {
 		api.RequestErr(ctx, errors.New("page_size参数不能小于0"))
@@ -165,34 +175,28 @@ func (s *Server) getAllRelationship(ctx *gin.Context) {
 }
 
 func (s *Server) createRelationship(ctx *gin.Context) {
-	rawData, err := ctx.GetRawData()
+	vo := &common.CreateRelationshipModelVO{}
+	if err := ctx.ShouldBindJSON(vo); err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
+	result, err := s.ModelService.SaveRelationship(vo, ctx.GetHeader("x-wrapper-username"))
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	modelRelation := store.RelationshipModel{}
 
-	if err := json.Unmarshal(rawData, &modelRelation); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-
-	if err := s.ModelService.SaveRelationship(&modelRelation); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-
-	api.RequestOK(ctx, modelRelation)
+	api.RequestOK(ctx, result)
 }
 
 func (s *Server) updateRelationship(ctx *gin.Context) {
-	vo := &common.RelationshipModelUpdateVO{}
+	vo := &common.UpdateRelationshipModelVO{}
 	if err := ctx.ShouldBindJSON(vo); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
 
-	if err := s.ModelService.UpdateRelationship(vo, ""); err != nil {
+	if err := s.ModelService.UpdateRelationship(vo, ctx.GetHeader("x-wrapper-username")); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}

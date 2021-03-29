@@ -2,11 +2,11 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/yametech/devops-cmdb-service/pkg/api"
 	"github.com/yametech/devops-cmdb-service/pkg/common"
-	"github.com/yametech/devops-cmdb-service/pkg/store"
 )
 
 func (s *Server) getAllAttributeGroup(ctx *gin.Context) {
@@ -33,7 +33,7 @@ func (s *Server) getAttributeGroup(ctx *gin.Context) {
 		return
 	}
 	uuid := fmt.Sprintf("%v", unstructured["uuid"])
-	attributeGroup, err := s.AttributeService.GetAttributeGroupInstance(uuid)
+	attributeGroup, err := s.AttributeService.GetAttributeGroup(uuid)
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -47,8 +47,7 @@ func (s *Server) createAttributeGroup(ctx *gin.Context) {
 		api.RequestErr(ctx, err)
 		return
 	}
-
-	result, err := s.AttributeService.CreateAttributeGroup(vo, "")
+	result, err := s.AttributeService.CreateAttributeGroup(vo, ctx.GetHeader("x-wrapper-username"))
 
 	if err != nil {
 		api.RequestErr(ctx, err)
@@ -65,7 +64,7 @@ func (s *Server) putAttributeGroup(ctx *gin.Context) {
 		return
 	}
 
-	attributeGroup, err := s.AttributeService.UpdateAttributeGroup(vo, "")
+	attributeGroup, err := s.AttributeService.UpdateAttributeGroup(vo, ctx.GetHeader("x-wrapper-username"))
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
@@ -75,6 +74,16 @@ func (s *Server) putAttributeGroup(ctx *gin.Context) {
 }
 
 func (s *Server) deleteAttributeGroup(ctx *gin.Context) {
+	idVO := &common.IdVO{}
+	if err := ctx.BindJSON(idVO); err != nil || idVO.UUID == "" {
+		api.RequestErr(ctx, errors.New("参数异常"))
+		return
+	}
+	err := s.DeleteAttributeGroup(idVO.UUID)
+	if err != nil {
+		api.RequestErr(ctx, err)
+		return
+	}
 	api.RequestOK(ctx, "")
 }
 
@@ -111,45 +120,29 @@ func (s *Server) getAttribute(ctx *gin.Context) {
 }
 
 func (s *Server) createAttribute(ctx *gin.Context) {
-	rawData, err := ctx.GetRawData()
-	if err != nil {
+	vo := &common.CreateAttributeVO{}
+	if err := ctx.ShouldBindJSON(vo); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	unstructured := make(map[string]interface{})
-	if err := json.Unmarshal(rawData, &unstructured); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	attributeGroupUuid := fmt.Sprintf("%v", unstructured["attributegroupuuid"])
-	attribute := &store.Attribute{}
-	if err := json.Unmarshal(rawData, attribute); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	err = s.AttributeService.ChangeModelGroup(attribute, attributeGroupUuid)
+
+	result, err := s.AttributeService.CreateAttribute(vo, ctx.GetHeader("x-wrapper-username"))
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
 
-	api.RequestOK(ctx, attribute)
+	api.RequestOK(ctx, result)
 }
 
 func (s *Server) putAttribute(ctx *gin.Context) {
-	rawData, err := ctx.GetRawData()
-	if err != nil {
+	vo := &common.UpdateAttributeVO{}
+	if err := ctx.ShouldBindJSON(vo); err != nil {
 		api.RequestErr(ctx, err)
 		return
 	}
-	unstructured := make(map[string]interface{})
-	if err := json.Unmarshal(rawData, &unstructured); err != nil {
-		api.RequestErr(ctx, err)
-		return
-	}
-	uuid := fmt.Sprintf("%v", unstructured["uuid"])
 
-	result, err := s.AttributeService.UpdateAttribute(rawData, uuid)
+	result, err := s.AttributeService.UpdateAttribute(vo, ctx.GetHeader("x-wrapper-username"))
 	if err != nil {
 		api.RequestErr(ctx, err)
 		return
