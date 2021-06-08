@@ -10,6 +10,7 @@ type AttributeCommon struct {
 	ValueType    string      `json:"valueType" gogm:"name=valueType"`       // 类型:短字符,长字符,数字,浮点,枚举,日期,时间,用户,布尔,列表
 	Editable     bool        `json:"editable" gogm:"name=editable"`         // 是否可编辑
 	Required     bool        `json:"required" gogm:"name=required"`         // 是否必填
+	Unique       bool        `json:"unique" gogm:"name=unique"`             // 是否唯一
 	DefaultValue interface{} `json:"defaultValue" gogm:"name=defaultValue"` // 默认值
 	Unit         string      `json:"unit" gogm:"name=unit"`                 // 单位
 	Maximum      string      `json:"maximum" gogm:"name=maximum"`           // 最大值

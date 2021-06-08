@@ -4,8 +4,55 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/yametech/devops-cmdb-service/pkg/gogm"
+	"github.com/yametech/devops-cmdb-service/pkg/store"
 	"reflect"
 )
+
+// 转换一行记录，格式： (a:Resource)<-[]-(b:AttributeGroupIns)<-[]-(c:AttributeIns)
+func GetResourceFromNeo4jRow(row []interface{}) *store.Resource {
+	// 属性
+	o := row[2].(*gogm.NodeWrap)
+	attributeIns := &store.AttributeIns{}
+	SimpleConvert(attributeIns, &o.Props)
+
+	// 属性分组
+	o = row[1].(*gogm.NodeWrap)
+	attributeGroupIns := &store.AttributeGroupIns{}
+	SimpleConvert(attributeGroupIns, &o.Props)
+
+	// 实例
+	o = row[0].(*gogm.NodeWrap)
+	resource := &store.Resource{}
+	SimpleConvert(resource, &o.Props)
+	resource.Id = o.Id
+
+	attributeGroupIns.AddAttributeIns(attributeIns)
+	resource.AddAttributeGroupIns(attributeGroupIns)
+
+	return resource
+}
+
+// 转换一个实例信息，格式： (a:Resource)<-[]-(b:AttributeGroupIns)<-[]-(c:AttributeIns)
+func GetResourceFromNeo4jResult(result [][]interface{}) []*store.Resource {
+	resourceMap := make(map[string]*store.Resource)
+	for _, row := range result {
+		r := GetResourceFromNeo4jRow(row)
+		resource, ok := resourceMap[r.UUID]
+		if !ok {
+			resource = r
+			resource.Id = r.Id
+			resourceMap[r.UUID] = resource
+		}
+		resource.AddAttributeGroupIns(r.AttributeGroupIns[0])
+	}
+	resources := make([]*store.Resource, 0)
+	for _, resource := range resourceMap {
+		resources = append(resources, resource)
+	}
+
+	return resources
+}
 
 func Stream2Json(stream []byte) (*map[string]string, error) {
 	paramMap := map[string]string{}

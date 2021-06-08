@@ -12,13 +12,19 @@ type Service struct {
 }
 
 func (s *Service) ManualQuery(query string, properties map[string]interface{}, respObj interface{}) error {
-	return s.GetSession(true).Query(query, properties, respObj)
+	session := s.GetSession(true)
+	defer session.Close()
+	return session.Query(query, properties, respObj)
 }
 
 func (s *Service) ManualQueryRaw(query string, properties map[string]interface{}) ([][]interface{}, error) {
-	return s.GetSession(true).QueryRaw(query, properties)
+	session := s.GetSession(true)
+	defer session.Close()
+	return session.QueryRaw(query, properties)
 }
 
 func (s *Service) ManualExecute(query string, properties map[string]interface{}) ([][]interface{}, error) {
-	return s.GetSession(false).QueryRaw(query, properties)
+	session := s.GetSession(false)
+	defer session.Close()
+	return session.QueryRaw(query, properties)
 }

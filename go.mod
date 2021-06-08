@@ -4,16 +4,20 @@ go 1.16
 
 require (
 	github.com/adam-hanna/arrayOperations v0.2.6
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1074
+	github.com/coreos/etcd v3.3.25+incompatible
 	github.com/cornelk/hashmap v1.0.0
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-ldap/ldap/v3 v3.2.4
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/google/uuid v1.2.0
 	github.com/mindstand/go-cypherdsl v0.2.0
 	//github.com/mindstand/gogm v1.5.1
 	github.com/neo4j/neo4j-go-driver/v4 v4.2.4
 	github.com/sirupsen/logrus v1.6.0
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	github.com/yametech/go_insect v0.0.0-20210324065405-897e12c643e9
+	go.mongodb.org/mongo-driver v1.5.2
 )
 
 replace (

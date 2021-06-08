@@ -7,8 +7,8 @@ type ApiResponseVO struct {
 }
 
 type PageResultVO struct {
-	TotalCount int64         `json:"totalCount"`
-	List       []interface{} `json:"list"`
+	TotalCount int64       `json:"totalCount"`
+	List       interface{} `json:"list"`
 }
 
 type ModelAttributeVisibleVO struct {
@@ -47,13 +47,15 @@ type ResourceRelationListPageVO struct {
 }
 
 type ResourceListPageParamVO struct {
-	PageSize         int                `form:"pageSize" json:"pageSize" binding:"required,gte=0"`
-	Current          int                `form:"current" json:"current" binding:"required,gte=0"`
-	UUID             string             `form:"uuid" json:"uuid" binding:""`
-	ModelRelationUid string             `form:"modelRelationUid" json:"modelRelationUid" binding:""`
-	ModelUid         string             `form:"modelUid" json:"modelUid" binding:"required"`
-	QueryValue       string             `json:"queryValue" binding:""`
-	QueryMap         *map[string]string `json:"queryMap" binding:""`
+	PageSize         int                 `form:"pageSize" json:"pageSize" binding:"required,gte=0"`
+	Current          int                 `form:"current" json:"current" binding:"required,gte=0"`
+	ModelUid         string              `form:"modelUid" json:"modelUid" binding:"required"`
+	QueryTags        map[string][]string `json:"queryTags" binding:""`                      // 单字段多值查询，uid:['v1','v2','v3']
+	QueryValue       string              `json:"queryValue" binding:""`                     // 不指定字段查询
+	QueryMap         *map[string]string  `json:"queryMap" binding:""`                       // 值键对查询，uid:attributeInsValue
+	UUID             string              `form:"uuid" json:"uuid" binding:""`               // 资源实例uuid
+	HasRelation      int                 `form:"hasRelation" json:"hasRelation" binding:""` // 0:跟实例uuid没关联的，1:跟实例uuid有关联的
+	ModelRelationUid string              `form:"modelRelationUid" json:"modelRelationUid" binding:""`
 }
 
 type AddModelGroupVO struct {
@@ -68,9 +70,10 @@ type AddModelVO struct {
 }
 
 type UpdateModelVO struct {
-	UUID string `json:"uuid" binding:"required"`
-	Uid  string `json:"uid" binding:"required"`
-	Name string `json:"name" binding:"required"`
+	ModelGroupUUID string `json:"modelGroupUUID" binding:""`
+	UUID           string `json:"uuid" binding:"required"`
+	Uid            string `json:"uid" binding:"required"`
+	Name           string `json:"name" binding:"required"`
 }
 
 type AddAttributeGroupVO struct {
@@ -152,6 +155,7 @@ type CreateAttributeVO struct {
 	ValueType          string      `json:"valueType" form:"valueType" binding:"required"`
 	Editable           bool        `json:"editable" form:"editable" binding:""`
 	Required           bool        `json:"required" form:"required" binding:""`
+	Unique             bool        `json:"unique" form:"unique" binding:""`
 	Regular            string      `json:"regular" form:"regular" binding:""`
 	Comment            string      `json:"comment" form:"comment" binding:""`
 	DefaultValue       interface{} `json:"defaultValue" form:"defaultValue"`
@@ -171,6 +175,7 @@ type UpdateAttributeVO struct {
 	ValueType    string      `json:"valueType" form:"valueType" binding:"required"`
 	Editable     bool        `json:"editable" form:"editable" binding:""`
 	Required     bool        `json:"required" form:"required" binding:""`
+	Unique       bool        `json:"unique" form:"unique" binding:""`
 	Regular      string      `json:"regular" form:"regular" binding:""`
 	Comment      string      `json:"comment" form:"comment" binding:""`
 	DefaultValue interface{} `json:"defaultValue" form:"defaultValue"`
@@ -185,4 +190,12 @@ type UpdateAttributeVO struct {
 type LdapUserVO struct {
 	Uid  string `json:"uid"`
 	Name string `json:"name"`
+}
+
+type AliyunAccountVO struct {
+	Uuid         string `json:"uuid"`
+	Account      string `json:"account"`
+	AccessKeyId  string `json:"access_keyid"`
+	AccessSecret string `json:"access_secret"`
+	Area         string `json:"area"`
 }

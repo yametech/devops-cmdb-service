@@ -30,6 +30,9 @@ func filterMiddleware() gin.HandlerFunc {
 }
 
 func NewServer(apiServer api.IApiServer) *Server {
+	// config
+	common.WebConfig()
+
 	server := &Server{
 		apiServer,
 		&service.ModelService{},
@@ -37,7 +40,7 @@ func NewServer(apiServer api.IApiServer) *Server {
 	}
 	//apiServer.GINEngine().Use(filterMiddleware())
 
-	groupRoute := apiServer.GINEngine().Group(common.WEB_API_GROUP)
+	groupRoute := apiServer.GINEngine().Group(common.WebApiGroup)
 
 	groupRoute.POST("/model/model-group-list", server.getAllGroup)
 	groupRoute.POST("/model/model-group-detail", server.getGroup)
@@ -69,7 +72,7 @@ func NewServer(apiServer api.IApiServer) *Server {
 	groupRoute.POST("/model/relationship-delete", server.deleteRelationship)
 
 	// resource
-	resource := &ResourceApi{&service.ResourceService{}}
+	resource := &ResourceApi{&service.ResourceService{}, &service.SyncService{}}
 	resource.router(apiServer.GINEngine())
 
 	// relation
@@ -89,6 +92,10 @@ func Success(ctx *gin.Context, data interface{}) {
 
 func Error(ctx *gin.Context, msg string) {
 	ctx.JSON(http.StatusOK, &common.ApiResponseVO{Msg: msg, Code: 400})
+}
+
+func ErrorWithData(ctx *gin.Context, data interface{}, msg string) {
+	ctx.JSON(http.StatusOK, &common.ApiResponseVO{Data: data, Msg: msg, Code: 400})
 }
 
 func ResultHandle(ctx *gin.Context, result interface{}, err error) {

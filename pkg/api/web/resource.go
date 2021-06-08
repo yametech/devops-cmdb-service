@@ -14,10 +14,11 @@ import (
 type ResourceApi struct {
 	//Server
 	resourceService *service.ResourceService
+	*service.SyncService
 }
 
 func (r *ResourceApi) router(e *gin.Engine) {
-	groupRoute := e.Group(common.WEB_API_GROUP)
+	groupRoute := e.Group(common.WebApiGroup)
 	groupRoute.GET("/model-menu", r.getModelMenu)
 	groupRoute.GET("/model-attribute/:uid", r.getModelAttribute)
 	groupRoute.PUT("/model-attribute/:uid", r.configModelAttribute)
@@ -28,6 +29,24 @@ func (r *ResourceApi) router(e *gin.Engine) {
 	groupRoute.PUT("/resource", r.updateResource)
 	groupRoute.DELETE("/resource", r.deleteResource)
 	groupRoute.PUT("/resource-attribute/:uuid", r.updateResourceAttribute)
+	groupRoute.GET("/resource-sync/:modelUid", r.resourceSync)
+	groupRoute.GET("/sync-button/:modelUid", r.syncButton)
+}
+
+// 同步按钮
+func (r *ResourceApi) syncButton(ctx *gin.Context) {
+	result := r.SyncService.SyncButton(ctx.Param("modelUid"), ctx.GetHeader("x-wrapper-username"))
+	Success(ctx, result)
+}
+
+// 资源实例同步
+func (r *ResourceApi) resourceSync(ctx *gin.Context) {
+	_, err := r.SyncService.SyncResource(ctx.Param("modelUid"), ctx.GetHeader("x-wrapper-username"))
+	if err != nil {
+		Error(ctx, err.Error())
+		return
+	}
+	Success(ctx, "")
 }
 
 // 获取资源实例字段列表
@@ -58,7 +77,7 @@ func (r *ResourceApi) addResource(ctx *gin.Context) {
 	rawData, _ := ctx.GetRawData()
 	result, err := r.resourceService.AddResource(string(rawData), ctx.GetHeader("x-wrapper-username"))
 	if err != nil {
-		Error(ctx, err.Error())
+		ErrorWithData(ctx, result, err.Error())
 		return
 	}
 	Success(ctx, result)
@@ -68,7 +87,7 @@ func (r *ResourceApi) updateResource(ctx *gin.Context) {
 	rawData, _ := ctx.GetRawData()
 	result, err := r.resourceService.UpdateResource(string(rawData), ctx.GetHeader("x-wrapper-username"))
 	if err != nil {
-		Error(ctx, err.Error())
+		ErrorWithData(ctx, result, err.Error())
 		return
 	}
 	Success(ctx, result)
@@ -102,7 +121,7 @@ func (r *ResourceApi) getResourceListPage(ctx *gin.Context) {
 				return
 			}
 		}
-		Success(ctx, r.resourceService.GetResourceListPageByMap(vo.UUID, vo.ModelUid, vo.ModelRelationUid, vo.Current, vo.PageSize, vo.QueryMap))
+		Success(ctx, r.resourceService.GetResourceListPage(vo))
 	}
 
 }

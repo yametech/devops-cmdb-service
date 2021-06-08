@@ -40,7 +40,9 @@ func (as *AttributeService) GetAttributeGroupList(limit string, pageNumber strin
 
 func (as *AttributeService) GetAttributeGroup(uuid string) (*store.AttributeGroup, error) {
 	attributeGroup := &store.AttributeGroup{}
-	if err := as.GetSession(true).Load(attributeGroup, uuid); err != nil {
+	session := as.GetSession(true)
+	defer session.Close()
+	if err := session.Load(attributeGroup, uuid); err != nil {
 		return nil, err
 	}
 	return attributeGroup, nil
@@ -128,7 +130,7 @@ func (as *AttributeService) UpdateAttributeGroup(attributeGroupVO *common.Update
 	}
 
 	attributeGroup.Name = attributeGroupVO.Name
-	attributeGroup.UpdateTime = time.Now().Unix()
+	attributeGroup.UpdateTime = time.Now().UnixNano() / 1000000
 	attributeGroup.Editor = operator
 	if err := as.Neo4jDomain.Update(attributeGroup); err != nil {
 		return nil, err
@@ -145,12 +147,15 @@ func (as *AttributeService) DeleteAttributeGroup(uuid string) error {
 		return err
 	}
 
-	as.GetSession(true).LoadDepth(attributeGroup, uuid, 1)
+	session := as.GetSession(true)
+	defer session.Close()
+	session.LoadDepth(attributeGroup, uuid, 1)
 	if len(attributeGroup.Attributes) > 0 {
 		return errors.New("此分组下存在属性，不可删除")
 	}
-
-	if err := as.GetSession(false).DeleteUUID(uuid); err != nil {
+	wSession := as.GetSession(false)
+	defer wSession.Close()
+	if err := wSession.DeleteUUID(uuid); err != nil {
 		return err
 	}
 	return nil
@@ -163,8 +168,8 @@ func (as *AttributeService) CreateAttribute(vo *common.CreateAttributeVO, operat
 	if err := UidNameValidate(vo.Uid, vo.Name); err != nil {
 		return nil, err
 	}
-	if strings.Index(common.ATTRIBUTE_TYPE, vo.ValueType) < 0 {
-		return nil, fmt.Errorf("%q不在属性类型范围内：%q", vo.ValueType, common.ATTRIBUTE_TYPE)
+	if strings.Index(common.AttributeType, vo.ValueType) < 0 {
+		return nil, fmt.Errorf("%q不在属性类型范围内：%q", vo.ValueType, common.AttributeType)
 	}
 
 	as.mutex.Lock()
@@ -228,7 +233,9 @@ func (as *AttributeService) GetAttributeList(limit string, pageNumber string) (*
 		"skip":  (pageNumberInt - 1) * limitInt,
 		"limit": limitInt,
 	}
-	if err := as.GetSession(true).Query(query, properties, &attributeList); err != nil {
+	session := as.GetSession(true)
+	defer session.Close()
+	if err := session.Query(query, properties, &attributeList); err != nil {
 		return nil, err
 	}
 	return &attributeList, nil
@@ -245,14 +252,55 @@ func (as *AttributeService) GetAttribute(uuid string) (*store.Attribute, error) 
 	return attribute, nil
 }
 
-func (as *AttributeService) UpdateAttribute(vo *common.UpdateAttributeVO, operator string) (*store.Attribute, error) {
+func (as *AttributeService) UpdateAttribute(vo *common.UpdateAttributeVO, operator string) (interface{}, error) {
 	source, err := as.GetAttribute(vo.UUID)
 	if err != nil {
-		return nil, errors.New("属性不存在")
+		return nil, err
 	}
+
+	if source.Uid != vo.Uid || source.ValueType != vo.ValueType {
+		return nil, fmt.Errorf("属性唯一标识和类型不能修改")
+	}
+	// 唯一属性字段验证
+	if vo.Unique {
+		session := as.GetSession(true)
+		defer session.Close()
+		err = session.LoadDepth(source, vo.UUID, 1)
+		if err != nil {
+			return nil, err
+		}
+
+		attributeMap := map[string]interface{}{}
+		attributeMap["uid"] = source.Uid
+		attributeMap["name"] = source.Name
+		attributeMap["groupUid"] = source.AttributeGroup.Uid
+		attributeMap["modelUid"] = source.ModelUid
+		query := "MATCH (a:Resource)<-[]-(b:AttributeGroupIns)<-[]-(c:AttributeIns) " +
+			"WHERE a.modelUid=$modelUid and b.uid=$groupUid and c.uid=$uid and trim(c.attributeInsValue) <> '' RETURN c.attributeInsValue, COUNT(*) ORDER BY COUNT(*) DESC"
+		result, err := as.ManualQueryRaw(query, attributeMap)
+		if err != nil {
+			return nil, err
+		}
+		var duplicateCounts int64
+		var duplicateValues []string
+		if result != nil && len(result) > 0 {
+			for _, r := range result {
+				if r[1].(int64) > 1 {
+					duplicateCounts += r[1].(int64)
+					duplicateValues = append(duplicateValues, r[0].(string))
+				}
+			}
+
+		}
+		if duplicateCounts > 0 {
+			attributeMap["insValues"] = duplicateValues
+			return attributeMap, fmt.Errorf("保存失败，发现该属性存在%v条重复实例信息数据，请先前往修改。", duplicateCounts)
+		}
+	}
+
 	attribute := &store.Attribute{}
 	utils.SimpleConvert(attribute, vo)
-	attribute.UpdateTime = time.Now().Unix()
+	attribute.UpdateTime = time.Now().UnixNano() / 1000000
 	attribute.Editor = operator
 
 	// 固定不变的值
@@ -275,5 +323,7 @@ func (as *AttributeService) DeleteAttributeInstance(uuid string) error {
 	if err := as.Neo4jDomain.Delete(attribute); err != nil {
 		return err
 	}
+	//TODO 删除实例的字段
+
 	return nil
 }

@@ -176,11 +176,11 @@ func TestInit(t *testing.T) {
 	resourceResult2, err := resourceService.AddResource(body2, "")
 
 	relationshipService := service.RelationService{}
-	resource1 := resourceResult.(*store.Resource)
-	resource2 := resourceResult2.(*store.Resource)
-	resource3 := resourceResult3.(*store.Resource)
+	//resource1 := resourceResult.(*store.Resource)
+	//resource2 := resourceResult2.(*store.Resource)
+	//resource3 := resourceResult3.(*store.Resource)
 	//relationshipService.AddModelRelation("{\"relationshipUid\":\"belong\",\"constraint\":\"N - N\",\"sourceUid\":\"cabinet\",\"targetUid\":\"host\",\"comment\":\"描述信息\"}", "")
 
-	relationshipService.AddResourceRelation(resource1.UUID, resource2.UUID, "host_belong_cabinet")
-	relationshipService.AddResourceRelation(resource3.UUID, resource2.UUID, "host_belong_cabinet")
+	relationshipService.AddResourceRelation(resourceResult.UUID, resourceResult2.UUID, "host_belong_cabinet")
+	relationshipService.AddResourceRelation(resourceResult3.UUID, resourceResult2.UUID, "host_belong_cabinet")
 }

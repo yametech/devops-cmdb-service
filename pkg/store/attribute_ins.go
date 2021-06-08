@@ -6,6 +6,6 @@ type AttributeIns struct {
 	gogm.BaseNode
 	AttributeCommon
 	AttributeGroupIns *AttributeGroupIns `json:"-" gogm:"direction=outgoing;relationship=GroupBy"`
-	AttributeInsValue string             `json:"attributeInsValue" gogm:"name=attributeInsValue"`
+	AttributeInsValue string             `json:"attributeInsValue" gogm:"index;name=attributeInsValue"`
 	CommonObj
 }

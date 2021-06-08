@@ -144,7 +144,7 @@ func (s *Server) putAttribute(ctx *gin.Context) {
 
 	result, err := s.AttributeService.UpdateAttribute(vo, ctx.GetHeader("x-wrapper-username"))
 	if err != nil {
-		api.RequestErr(ctx, err)
+		ErrorWithData(ctx, result, err.Error())
 		return
 	}
 

@@ -20,7 +20,6 @@
 package gogm
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/neo4j/neo4j-go-driver/v4/neo4j"
@@ -41,8 +40,8 @@ func decode(result neo4j.Result, respObj interface{}) (err error) {
 		return ErrNotFound
 	}
 
-	b, _ := json.Marshal(rows)
-	fmt.Println(string(b))
+	//b, _ := json.Marshal(rows)
+	//fmt.Println(string(b))
 	return innerDecode(rows, respObj)
 }
 

@@ -65,12 +65,16 @@ func (ms *ModelService) DeleteModelGroup(uuid string) error {
 		return err
 	}
 
-	ms.GetSession(true).LoadDepth(modelGroup, uuid, 1)
+	session := ms.GetSession(true)
+	defer session.Close()
+	session.LoadDepth(modelGroup, uuid, 1)
 	if len(modelGroup.Models) > 0 {
 		return errors.New("此分组下存在模型，不可删除")
 	}
 
-	if err := ms.GetSession(false).DeleteUUID(uuid); err != nil {
+	wSession := ms.GetSession(false)
+	defer wSession.Close()
+	if err := wSession.DeleteUUID(uuid); err != nil {
 		return err
 	}
 	return nil
@@ -88,8 +92,8 @@ func UidNameValidate(uid, name string) error {
 	}
 
 	name = strings.TrimSpace(name)
-	if len(name) < 1 || len([]rune(name)) > 10 {
-		return fmt.Errorf("名称%q不符合规范：长度不超过10位", name)
+	if len(name) < 1 || len([]rune(name)) > 30 {
+		return fmt.Errorf("名称%q不符合规范：长度不超过30位", name)
 	}
 
 	return nil
@@ -131,7 +135,7 @@ func (ms *ModelService) UpdateModelGroup(vo *common.AddModelGroupVO, operator st
 	}
 
 	modelGroup.Name = strings.TrimSpace(vo.Name)
-	modelGroup.UpdateTime = time.Now().Unix()
+	modelGroup.UpdateTime = time.Now().UnixNano() / 1000000
 	modelGroup.CommonObj.Editor = operator
 
 	err := ms.Neo4jDomain.Update(modelGroup)
@@ -180,36 +184,64 @@ func (ms *ModelService) UpdateModel(vo *common.UpdateModelVO, operator string) e
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
 
-	models := make([]store.Model, 0)
 	vo.Name = strings.TrimSpace(vo.Name)
-	err := ms.Get(&models, "name", vo.Name)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	if len(models) > 1 {
-		return errors.New("已存在该名称的模型")
-	}
-	if len(models) == 1 {
-		if models[0].UUID != vo.UUID {
-			return errors.New("已存在该名称的模型")
-		} else {
-			return nil
-		}
-	}
-
+	vo.ModelGroupUUID = strings.TrimSpace(vo.ModelGroupUUID)
 	model := &store.Model{}
-	err = ms.Get(model, "uuid", vo.UUID)
+	err := ms.Get(model, "uuid", vo.UUID)
 	if err != nil {
 		if model.UUID == "" {
 			return errors.New("模型已被删除")
 		}
 		return err
 	}
+
+	session := ms.GetSession(false)
+	defer session.Close()
+	// 更新名称
+	if model.Name != vo.Name {
+		models := make([]store.Model, 0)
+		err := ms.Get(&models, "name", vo.Name)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		// 校验
+		if len(models) > 1 {
+			return errors.New("已存在该名称的模型")
+		}
+		if len(models) == 1 {
+			if models[0].UUID != vo.UUID {
+				return errors.New("已存在该名称的模型")
+			} else {
+				return nil
+			}
+		}
+	}
+
+	// 更新模型分组
+	if vo.ModelGroupUUID != "" {
+		modelGroup := &store.ModelGroup{}
+		err := ms.Get(modelGroup, "uuid", vo.ModelGroupUUID)
+		if err != nil {
+			if modelGroup.UUID == "" {
+				return fmt.Errorf("模型分组已被删除")
+			}
+			return err
+		}
+
+		// 删除关系
+		session.QueryRaw("MATCH (:Model{uid:$modelUid})-[r1:GroupBy]-(:ModelGroup) DELETE r1",
+			map[string]interface{}{"modelUid": vo.Uid})
+
+		// 新增关系
+		session.QueryRaw("match (n:Model{uid:$modelUid}),(m:ModelGroup{uuid:$modelGroupUUID}) create (n)-[r2:GroupBy]->(m)",
+			map[string]interface{}{"modelUid": vo.Uid, "modelGroupUUID": vo.ModelGroupUUID})
+	}
+	// 更新模型
 	model.Name = vo.Name
-	model.UpdateTime = time.Now().Unix()
+	model.UpdateTime = time.Now().UnixNano() / 1000000
 	model.Editor = operator
-	return ms.Update(model)
+	return session.Save(model)
 }
 
 func (ms *ModelService) DeleteModel(uuid, operator string) error {
@@ -236,7 +268,9 @@ func (ms *ModelService) GetSimpleModelList() ([]*store.Model, error) {
 	allModel := make([]*store.Model, 0)
 	query := fmt.Sprintf("match (a:Model) return a ORDER BY a.createTime ASC")
 	properties := map[string]interface{}{}
-	if err := ms.GetSession(true).Query(query, properties, &allModel); err != nil {
+	session := ms.GetSession(true)
+	defer session.Close()
+	if err := session.Query(query, properties, &allModel); err != nil {
 		return allModel, err
 	}
 	return allModel, nil
@@ -293,7 +327,9 @@ func (ms *ModelService) GetRelationshipList(pageSize, pageNumber int) ([]*store.
 		"skip":  (pageNumber - 1) * pageSize,
 		"limit": pageSize,
 	}
-	if err := ms.GetSession(true).Query(query, properties, &allModel); err != nil {
+	session := ms.GetSession(true)
+	defer session.Close()
+	if err := session.Query(query, properties, &allModel); err != nil {
 		return nil, err
 	}
 	// get all ModelRelation, count the Relationship usage
@@ -374,7 +410,7 @@ func (ms *ModelService) UpdateRelationship(vo *common.UpdateRelationshipModelVO,
 	relation.Source2Target = vo.Source2Target
 	relation.Target2Source = vo.Target2Source
 	relation.Direction = vo.Direction
-	relation.UpdateTime = time.Now().Unix()
+	relation.UpdateTime = time.Now().UnixNano() / 1000000
 	relation.Editor = operator
 	return ms.Neo4jDomain.Update(relation)
 }

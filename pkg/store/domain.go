@@ -50,8 +50,8 @@ type Model struct {
 }
 
 func (cm *CommonObj) InitCommonObj(creator string) {
-	cm.CreateTime = time.Now().Unix()
-	cm.UpdateTime = time.Now().Unix()
+	cm.CreateTime = time.Now().UnixNano() / 1000000
+	cm.UpdateTime = time.Now().UnixNano() / 1000000
 	cm.Creator = creator
 	cm.Editor = creator
 }

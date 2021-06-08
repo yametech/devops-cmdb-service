@@ -13,7 +13,7 @@ type RelationshipApi struct {
 }
 
 func (r *RelationshipApi) router(e *gin.Engine) {
-	groupRoute := e.Group(common.WEB_API_GROUP)
+	groupRoute := e.Group(common.WebApiGroup)
 
 	groupRoute.POST("/model-relation-list", r.getModelRelationList)
 	groupRoute.POST("/model-relation-usage", r.getModelRelationUsageCount)

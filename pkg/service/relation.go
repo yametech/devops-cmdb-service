@@ -21,6 +21,7 @@ func (rs *RelationService) GetAllModelRelations() *[]common.ModelRelationVO {
 
 func (rs *RelationService) queryModelRelations(query string, properties map[string]interface{}) *[]common.ModelRelationVO {
 	session := rs.GetSession(true)
+	defer session.Close()
 	result, _ := session.QueryRaw(query, properties)
 
 	relations := make([]common.ModelRelationVO, 0)
@@ -108,7 +109,7 @@ func (rs *RelationService) UpdateModelRelation(vo *common.UpdateModelRelationVO,
 	properties["uid"] = src.Uid
 	properties["comment"] = src.Comment
 	properties["editor"] = src.Editor
-	properties["updateTime"] = time.Now().Unix()
+	properties["updateTime"] = time.Now().UnixNano() / 1000000
 	//
 	result, _ = rs.GetResourceRelationsByModelRelationUid(src.Uid)
 	////如果已有数据关联此模型，则只能更新描述备注
@@ -152,6 +153,14 @@ func (rs *RelationService) GetModelRelation(key, value string) ([][]interface{},
 }
 
 func (rs *RelationService) AddModelRelation(vo *common.AddModelRelationVO, operator string) (interface{}, error) {
+	relationshipModel := &store.RelationshipModel{}
+	if err := rs.Get(relationshipModel, "uid", vo.RelationshipUid); err != nil {
+		if relationshipModel.UUID == "" {
+			return nil, fmt.Errorf("关系模型%q不存在或已被删除", vo.RelationshipUid)
+		}
+		return nil, err
+	}
+
 	rs.mutex.Lock()
 	defer rs.mutex.Unlock()
 	relation, err := parseToModelRelation(vo, operator)
@@ -172,54 +181,69 @@ func (rs *RelationService) AddModelRelation(vo *common.AddModelRelationVO, opera
 	return result, err
 }
 
-// 关系名称+数量
-func (rs *RelationService) GetResourceRelationBrief(uuid string) (interface{}, error) {
-
-	return nil, nil
-}
-
-// 分页+实例
-func (rs *RelationService) GetResourceRelationSimplex(uuid, relationshipUid string) (interface{}, error) {
-
-	return nil, nil
-}
-
 func (rs *RelationService) GetResourceRelationList(uuid string) (interface{}, error) {
-	query := "match (a:Resource)-[r:Relation]-(b:Resource) where a.uuid = $uuid return a,r,b"
+	query := "match (a:Resource)-[r:Relation]-(b:Resource) where a.uuid = $uuid return a,r,b order by ID(r) ASC"
 	result, err := rs.ManualQueryRaw(query, map[string]interface{}{"uuid": uuid})
 
-	voList := &[]common.ResourceRelationListPageVO{}
+	voList := make([]common.ResourceRelationListPageVO, 0)
 	for _, row := range result {
-		addResourceRelationList(voList, row, uuid)
+		addResourceRelationList(&voList, row, uuid)
+	}
+
+	// 获取最新的模型名称
+	modelMap := make(map[string]store.Model)
+	for i := 0; i < len(voList); i++ {
+		model, ok := modelMap[voList[i].SourceUid]
+		if ok {
+			voList[i].SourceName = model.Name
+		} else {
+			model = store.Model{}
+			err := rs.Get(&model, "uid", voList[i].SourceUid)
+			if err != nil {
+				fmt.Println(err)
+			}
+			if model.UUID != "" {
+				voList[i].SourceName = model.Name
+				modelMap[voList[i].SourceUid] = model
+			}
+		}
+
+		model, ok = modelMap[voList[i].TargetUid]
+		if ok {
+			voList[i].TargetName = model.Name
+		} else {
+			model = store.Model{}
+			err := rs.Get(&model, "uid", voList[i].TargetUid)
+			if err != nil {
+				fmt.Println(err)
+			}
+			if model.UUID != "" {
+				voList[i].TargetName = model.Name
+				modelMap[voList[i].TargetUid] = model
+			}
+		}
 	}
 
 	return voList, err
 }
 
 func addResourceRelationList(result *[]common.ResourceRelationListPageVO, row []interface{}, uuid string) {
-	if row == nil {
-		return
-	}
-	if result == nil {
-		r := make([]common.ResourceRelationListPageVO, 0)
-		result = &r
-	}
 	pageVO := convert2ResourceRelationListPageVO(row, uuid)
 
-	newRelation := false
+	newRelation := true
 	for _, vo := range *result {
-		if vo.SourceUid == pageVO.SourceUid {
-			newRelation = true
+		if vo.RelationshipUid == pageVO.RelationshipUid {
+			newRelation = false
 			// 资源信息添加进去
 			*vo.Resources = append(*vo.Resources, (*pageVO.Resources)[0])
 		}
 	}
 	// 新的数据
-	if !newRelation {
+	if newRelation {
 		// 资源字段
-		resourceService := &ResourceService{}
+		//resourceService := &ResourceService{}
 		modelAttributes := &[]common.ModelAttributeVisibleVO{}
-		utils.SimpleConvert(modelAttributes, resourceService.GetModelAttributeList((*pageVO.Resources)[0]["modelUid"]))
+		//utils.SimpleConvert(modelAttributes, resourceService.GetModelAttributeList((*pageVO.Resources)[0]["modelUid"]))
 		pageVO.ModelAttributes = modelAttributes
 
 		*result = append(*result, *pageVO)
@@ -261,23 +285,23 @@ func convert2ResourceRelationListPageVO(row []interface{}, uuid string) *common.
 	resources = append(resources, resource)
 	vo.Resources = &resources
 	//补充资源实例
-	resourceService := ResourceService{}
-	res, _ := resourceService.GetResourceDetail(resource["uuid"])
-	for _, g := range res.AttributeGroupIns {
-		for _, attribute := range g.AttributeIns {
-			resource[attribute.Uid] = attribute.AttributeInsValue
-		}
-	}
+	//resourceService := ResourceService{}
+	//res, _ := resourceService.GetResourceDetail(resource["uuid"])
+	//for _, g := range res.AttributeGroupIns {
+	//	for _, attribute := range g.AttributeIns {
+	//		resource[attribute.Uid] = attribute.AttributeInsValue
+	//	}
+	//}
 
 	return vo
 }
 
-func (rs RelationService) DeleteResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
+func (rs *RelationService) DeleteResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
 	query := "match (a:Resource)-[r:Relation]-(b:Resource) where r.uid = $uid and a.uuid = $sourceUUID and b.uuid = $targetUUID delete  r"
 	return rs.ManualExecute(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
 }
 
-func (rs RelationService) AddResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
+func (rs *RelationService) AddResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
 	modelRelation, err := rs.GetModelRelation("uid", uid)
 	if err != nil {
 		return nil, err
@@ -300,7 +324,7 @@ func (rs RelationService) AddResourceRelation(sourceUUID, targetUUID, uid string
 	return result, err
 }
 
-func (rs RelationService) GetResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
+func (rs *RelationService) GetResourceRelation(sourceUUID, targetUUID, uid string) ([][]interface{}, error) {
 	query := "match (a:Resource)-[r:Relation]->(b:Resource) where r.uid = $uid and a.uuid = $sourceUUID and b.uuid = $targetUUID return distinct  r"
 	return rs.ManualQueryRaw(query, map[string]interface{}{"uid": uid, "sourceUUID": sourceUUID, "targetUUID": targetUUID})
 }
